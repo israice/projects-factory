@@ -73,5 +73,22 @@ def install():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/delete", methods=["POST"])
+def delete():
+    data = request.get_json()
+    repo_names = data.get("repos", [])
+    if not repo_names:
+        return jsonify({"error": "No repositories selected"}), 400
+    try:
+        timeout = 60 * len(repo_names)
+        result = subprocess.run(["python", "TOOLS/delete_local_folder.py"] + repo_names, capture_output=True, text=True, check=False, timeout=timeout, encoding="utf-8")
+        my_repos_dir = os.path.join(os.path.dirname(__file__), "MY_REPOS")
+        installed_count = len([d for d in os.listdir(my_repos_dir) if os.path.isdir(os.path.join(my_repos_dir, d))]) if os.path.exists(my_repos_dir) else 0
+        return jsonify({"success": True, "output": result.stdout, "error": result.stderr if result.returncode != 0 else None, "installed_count": installed_count})
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "Deletion timed out."}), 504
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(port=5000, use_reloader=False)

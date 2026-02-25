@@ -56,6 +56,16 @@
             </div>
         </div>
     </div>
+    <div id="delete-modal" class="modal-overlay">
+        <div class="modal">
+            <h3>Confirm Deletion</h3>
+            <div class="modal-body" id="modal-delete-repo-list"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="modal-delete-cancel">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" id="modal-delete-confirm" style="background:#dc3545">Delete</button>
+            </div>
+        </div>
+    </div>
     <table>
         <tr><th></th><th class="sortable" data-sort="name">Name</th><th class="sortable" data-sort="url">URL</th><th class="sortable" data-sort="private">Private</th><th class="sortable" data-sort="description">Description</th><th class="sortable" data-sort="created_at">Created</th></tr>
         {% for repo in repos %}
@@ -88,7 +98,8 @@
     <script>
         document.addEventListener("DOMContentLoaded",function(){
             const settingsCells=document.querySelectorAll(".settings-cell"),installedCountEl=document.getElementById("installed-count"),modal=document.getElementById("confirm-modal"),modalRepoList=document.getElementById("modal-repo-list"),modalCancel=document.getElementById("modal-cancel"),modalConfirm=document.getElementById("modal-confirm"),welcomeText=document.getElementById("welcome-text");
-            let sortColumn=null,sortDirection=1,pendingInstall=null;
+            const deleteModal=document.getElementById("delete-modal"),modalDeleteRepoList=document.getElementById("modal-delete-repo-list"),modalDeleteCancel=document.getElementById("modal-delete-cancel"),modalDeleteConfirm=document.getElementById("modal-delete-confirm");
+            let sortColumn=null,sortDirection=1,pendingInstall=null,pendingDelete=null;
             
             // Toggle action row on settings cell click
             settingsCells.forEach(cell=>{
@@ -119,7 +130,7 @@
                             actionRow=document.createElement("tr");
                             actionRow.className="action-row";
                             actionRow.id="bottom-panel-"+repoName;
-                            actionRow.innerHTML='<td colspan="6" class="action-cell"><button class="action-btn" data-action="install" data-name="'+repoName+'" data-url="'+repoUrl+'"><span class="action-btn-icon">📥</span><span class="action-btn-label">Install</span></button></td>';
+                            actionRow.innerHTML='<td colspan="6" class="action-cell"><button class="action-btn" data-action="install" data-name="'+repoName+'" data-url="'+repoUrl+'"><span class="action-btn-icon">📥</span><span class="action-btn-label">Install</span></button><button class="action-btn" data-action="delete" data-name="'+repoName+'" data-url="'+repoUrl+'"><span class="action-btn-icon">🗑️</span><span class="action-btn-label">Delete</span></button></td>';
                             row.parentNode.insertBefore(actionRow,row.nextSibling);
                         }
                         actionRow.classList.add("show");
@@ -140,12 +151,14 @@
                     pendingInstall={name:repoName,url:repoUrl};
                     modalRepoList.textContent=repoName;
                     modal.style.display="flex";
+                }else if(action==="delete"){
+                    pendingDelete={name:repoName,url:repoUrl};
+                    modalDeleteRepoList.textContent=repoName;
+                    deleteModal.style.display="flex";
                 }else if(action==="open"){
                     // TODO: Add open logic here
                 }else if(action==="settings"){
                     // TODO: Add settings logic here
-                }else if(action==="delete"){
-                    // TODO: Add delete logic here
                 }
             });
             
@@ -177,6 +190,35 @@
                 pendingInstall=null;
             });
             modal.addEventListener("click",function(e){if(e.target===modal){modal.style.display="none";pendingInstall=null}});
+
+            modalDeleteCancel.addEventListener("click",function(){deleteModal.style.display="none";pendingDelete=null});
+            modalDeleteConfirm.addEventListener("click",async function(){
+                if(!pendingDelete)return;
+                deleteModal.style.display="none";
+                welcomeText.textContent="⏳ Deleting "+pendingDelete.name+"...";
+                try{
+                    const response=await fetch("/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repos:[pendingDelete.name]})});
+                    const data=await response.json();
+                    if(data.success){
+                        if(data.installed_count!==undefined&&installedCountEl)installedCountEl.textContent="📁 Installed: "+data.installed_count;
+                        welcomeText.textContent="✅ Deleted "+pendingDelete.name;
+                        const settingsCell=document.querySelector(`.settings-cell[data-url="${pendingDelete.url}"]`);
+                        if(settingsCell){
+                            const settingsBtn=settingsCell.querySelector(".settings-btn");
+                            settingsBtn.classList.remove("active");
+                            settingsCell.closest("tr").classList.remove("installed-row");
+                            const actionRow=settingsCell.closest("tr").nextElementSibling;
+                            if(actionRow&&actionRow.classList.contains("action-row"))actionRow.classList.remove("show");
+                        }
+                    }else{
+                        welcomeText.textContent="❌ Deletion failed";
+                    }
+                }catch(err){
+                    welcomeText.textContent="❌ Request failed: "+err.message;
+                }
+                pendingDelete=null;
+            });
+            deleteModal.addEventListener("click",function(e){if(e.target===deleteModal){deleteModal.style.display="none";pendingDelete=null}});
             
             welcomeText.addEventListener("click",function(){welcomeText.textContent="Добро пожаловать, Мастер";welcomeText.className="welcome-text"});
             // Sorting functionality
