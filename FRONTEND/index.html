@@ -4,18 +4,23 @@
     <title>GitHub Repositories</title>
     <style>
         body{font-family:Arial,sans-serif;padding:20px}
-        .navbar{background:#333;padding:10px 20px 0;margin:-20px -20px 0;display:flex;gap:10px}
-        .navbar a{color:#fff;text-decoration:none;padding:8px 16px;border-radius:4px;cursor:default}
-        .header{background:#333;padding:0 20px 10px;margin:0 -20px 20px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+        .logo-wrapper{background:#333;display:flex;align-items:center;justify-content:center;min-width:80px;padding-right:0}
+        .logo-container{display:flex;align-items:center;justify-content:center;width:100%;padding:10px 0 10px 20px}
+        .logo-img{width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid #4CAF50}
+        .logo-icon{font-size:48px;font-weight:700;color:#4CAF50;text-decoration:none;display:flex;align-items:center;justify-content:center}
+        .navbar{background:#333;padding:10px 20px 0;margin:0;display:flex;gap:10px;align-items:center}
+        .navbar a{color:#fff;text-decoration:none;padding:8px 16px;border-radius:4px;cursor:default;margin-left:0}
+        .navbar a:first-child{margin-left:0;padding-left:0}
+        .navbar a[href="/refresh"]{cursor:pointer}
+        .navbar a[href="/refresh"]:hover{background:#555}
+        .header{background:#333;padding:0 20px 10px;margin:0;display:flex;justify-content:center;align-items:center;gap:20px}
         .header a{color:#fff;text-decoration:none;padding:8px 16px;border-radius:4px}
         .header a:hover{background:#555}
         .welcome-text{color:#0f0;font-weight:700;font-family:'Courier New',monospace;font-size:16px}
         table{border-collapse:collapse;width:100%}
         th,td{border:1px solid #ddd;padding:8px;text-align:left}
-        th{background:#4CAF50;color:#fff}
+        th{background:#4CAF50;color:#fff;text-align:center}
         tr:nth-child(even){background:#f2f2f2}
-        .profile-repo{background:#fff3cd!important;font-weight:700}
-        .profile-repo td{border:2px solid #ffc107}
         .installed-row{background:#d4edda!important}
         .installed-row td{border-color:#28a745}
         .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
@@ -32,18 +37,30 @@
         th.sortable:hover{background:#5CAF50}
         th.sort-asc::after{content:" ▲";font-size:12px}
         th.sort-desc::after{content:" ▼";font-size:12px}
+        .date-badge{display:inline-flex;align-items:center;background:#166534;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:9999px;white-space:nowrap}
     </style>
 </head>
 <body>
-    <div id="panel-1" class="navbar">
-        <a href="#">👨 User: {{ username }}</a>
-        <a href="#">📦 Repos: {{ count }}</a>
-        <a href="#" id="installed-count">📁 Installed: {{ installed_count }}</a>
-    </div>
-    <div id="panel-2" class="header">
-        <span class="welcome-text" id="welcome-text">Добро пожаловать, Мастер</span>
-        <div class="header-buttons">
-            <a href="/refresh">🔄 Refresh</a>
+    <div style="display:flex;align-items:stretch;gap:0">
+        <div class="logo-wrapper">
+            <div class="logo-container">
+                {% if avatar_url %}
+                <img src="{{ avatar_url }}" alt="Logo" class="logo-img">
+                {% else %}
+                <span class="logo-icon">📦</span>
+                {% endif %}
+            </div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column">
+            <div id="panel-1" class="navbar">
+                <a href="#">👨 User: {{ username }}</a>
+                <a href="#">📦 Repos: {{ count }}</a>
+                <a href="#" id="installed-count">📁 Installed: {{ installed_count }}</a>
+                <a href="/refresh" style="margin-left:auto">🔄 Refresh</a>
+            </div>
+            <div id="panel-2" class="header">
+                <span class="welcome-text" id="welcome-text">Добро пожаловать, Мастер</span>
+            </div>
         </div>
     </div>
     <div id="confirm-modal" class="modal-overlay">
@@ -71,13 +88,13 @@
         {% for repo in repos %}
         {% set normalized_url = repo.url[:-4] if repo.url.endswith('.git') else repo.url %}
         {% set normalized_url = normalized_url.rstrip('/') %}
-        <tr{% if repo.name == username %} class="profile-repo"{% elif normalized_url in installed_repos %} class="installed-row"{% endif %}>
+        <tr{% if normalized_url in installed_repos %} class="installed-row"{% endif %}>
             <td class="settings-cell" data-repo="{{ repo.name }}" data-url="{{ repo.url }}" title="Settings for {{ repo.name }}"><button type="button" class="settings-btn">⚙️</button></td>
             <td>{{ repo.name }}</td>
             <td><a href="{{ repo.url }}" target="_blank">{{ repo.url }}</a></td>
             <td>{{ "✓" if repo.private else "" }}</td>
             <td>{{ repo.description or "" }}</td>
-            <td>{{ repo.created_at[:10] if repo.created_at and repo.created_at else "" }}</td>
+            <td><span class="date-badge">{{ repo.created_at[:10] if repo.created_at and repo.created_at else "" }}</span></td>
         </tr>
         {% endfor %}
     </table>
@@ -226,21 +243,23 @@
                 th.addEventListener("click",function(){
                     const column=this.dataset.sort;
                     const table=this.closest("table");
-                    const rows=Array.from(table.querySelectorAll("tr"));
+                    const headerRow=table.querySelector("tr:first-child");
+                    const rows=Array.from(table.querySelectorAll("tr:not(:first-child)"));
                     if(sortColumn===column){sortDirection=-sortDirection}else{sortColumn=column;sortDirection=1}
                     document.querySelectorAll("th.sortable").forEach(h=>h.classList.remove("sort-asc","sort-desc"));
                     this.classList.add(sortDirection===1?"sort-asc":"sort-desc");
                     rows.sort((a,b)=>{
                         let aVal,bVal;
-                        if(column==="name"){aVal=a.cells[0].textContent.trim();bVal=b.cells[0].textContent.trim();}
-                        else if(column==="url"){aVal=a.cells[1].textContent.trim();bVal=b.cells[1].textContent.trim();}
-                        else if(column==="private"){aVal=a.cells[2].textContent.trim()?"1":"";bVal=b.cells[2].textContent.trim()?"1":"";}
-                        else if(column==="description"){aVal=a.cells[3].textContent.trim();bVal=b.cells[3].textContent.trim();}
-                        else if(column==="created_at"){aVal=a.cells[4].textContent.trim();bVal=b.cells[4].textContent.trim();}
+                        if(column==="name"){aVal=a.cells[1].textContent.trim();bVal=b.cells[1].textContent.trim();}
+                        else if(column==="url"){aVal=a.cells[2].textContent.trim();bVal=b.cells[2].textContent.trim();}
+                        else if(column==="private"){aVal=a.cells[3].textContent.trim()?"1":"";bVal=b.cells[3].textContent.trim()?"1":"";}
+                        else if(column==="description"){aVal=a.cells[4].textContent.trim();bVal=b.cells[4].textContent.trim();}
+                        else if(column==="created_at"){aVal=a.cells[5].textContent.trim();bVal=b.cells[5].textContent.trim();}
                         else{return 0;}
                         if(aVal<bVal)return -1*sortDirection;if(aVal>bVal)return 1*sortDirection;return 0;
                     });
-                    rows.forEach(row=>table.appendChild(row))
+                    rows.forEach(row=>table.appendChild(row));
+                    table.insertBefore(headerRow,table.firstChild);
                 })
             });
         });

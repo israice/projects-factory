@@ -44,12 +44,23 @@ def get_installed_repo_urls(my_repos_dir):
 def index():
     load_dotenv()
     username = os.getenv("GITHUB_USERNAME", "Unknown")
+    token = os.getenv("GITHUB_TOKEN", "")
+    # Fetch user avatar from GitHub API
+    avatar_url = ""
+    try:
+        import requests
+        headers = {"Authorization": f"token {token}"} if token else {}
+        resp = requests.get(f"https://api.github.com/users/{username}", headers=headers, timeout=5)
+        if resp.status_code == 200:
+            avatar_url = resp.json().get("avatar_url", "")
+    except Exception:
+        pass
     with open("TOOLS/get_all_github_projects.yaml", "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
     repos = sorted(data.get("repositories", []), key=lambda r: (r["name"] != username, r["name"].lower()))
     my_repos_dir = os.path.join(os.path.dirname(__file__), "MY_REPOS")
     installed_urls = get_installed_repo_urls(my_repos_dir)
-    return render_template("index.html", repos=repos, username=username, count=len(repos), installed_count=len(installed_urls), installed_repos=installed_urls)
+    return render_template("index.html", repos=repos, username=username, count=len(repos), installed_count=len(installed_urls), installed_repos=installed_urls, avatar_url=avatar_url)
 
 @app.route("/refresh")
 def refresh():
