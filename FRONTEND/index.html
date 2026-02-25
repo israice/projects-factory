@@ -5,8 +5,7 @@
     <style>
         body{font-family:Arial,sans-serif;padding:20px}
         .navbar{background:#333;padding:10px 20px 0;margin:-20px -20px 0;display:flex;gap:10px}
-        .navbar a{color:#fff;text-decoration:none;padding:8px 16px;border-radius:4px}
-        .navbar a:hover{background:#555}
+        .navbar a{color:#fff;text-decoration:none;padding:8px 16px;border-radius:4px;cursor:default}
         .header{background:#333;padding:0 20px 10px;margin:0 -20px 20px;display:flex;justify-content:space-between;align-items:center;gap:20px}
         .header a{color:#fff;text-decoration:none;padding:8px 16px;border-radius:4px}
         .header a:hover{background:#555}
@@ -44,7 +43,6 @@
     <div id="panel-2" class="header">
         <span class="welcome-text" id="welcome-text">Добро пожаловать, Мастер</span>
         <div class="header-buttons">
-            <a href="#" id="install-btn">📥 Install</a>
             <a href="/refresh">🔄 Refresh</a>
         </div>
     </div>
@@ -64,7 +62,7 @@
         {% set normalized_url = repo.url[:-4] if repo.url.endswith('.git') else repo.url %}
         {% set normalized_url = normalized_url.rstrip('/') %}
         <tr{% if repo.name == username %} class="profile-repo"{% elif normalized_url in installed_repos %} class="installed-row"{% endif %}>
-            <td><input type="checkbox" class="repo-checkbox" data-repo="{{ repo.name }}" data-url="{{ repo.url }}" title="Select {{ repo.name }}"></td>
+            <td class="settings-cell" data-repo="{{ repo.name }}" data-url="{{ repo.url }}" title="Settings for {{ repo.name }}"><button type="button" class="settings-btn">⚙️</button></td>
             <td>{{ repo.name }}</td>
             <td><a href="{{ repo.url }}" target="_blank">{{ repo.url }}</a></td>
             <td>{{ "✓" if repo.private else "" }}</td>
@@ -73,38 +71,113 @@
         </tr>
         {% endfor %}
     </table>
+    <style>
+        .action-row{display:none;background:#f9f9f9}
+        .action-row.show{display:table-row}
+        .action-cell{padding:5px;text-align:center}
+        .action-btn{display:inline-flex;flex-direction:row;align-items:center;gap:5px;padding:6px 12px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer;margin:0 5px}
+        .action-btn:hover{background:#e9e9e9;border-color:#bbb}
+        .action-btn-icon{font-size:16px}
+        .action-btn-label{font-size:11px;color:#555}
+        .settings-cell{cursor:pointer;padding:5px;text-align:center}
+        .settings-cell:hover{background:#e9e9e9}
+        .settings-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:5px;opacity:0.8;color:#333;pointer-events:none}
+        .settings-btn:hover{opacity:1;color:#000}
+        .settings-btn.active{opacity:1;color:#000;transform:rotate(30deg)}
+    </style>
     <script>
         document.addEventListener("DOMContentLoaded",function(){
-            const checkboxes=document.querySelectorAll(".repo-checkbox"),installBtn=document.getElementById("install-btn"),installedCountEl=document.getElementById("installed-count"),modal=document.getElementById("confirm-modal"),modalRepoList=document.getElementById("modal-repo-list"),modalCancel=document.getElementById("modal-cancel"),modalConfirm=document.getElementById("modal-confirm"),welcomeText=document.getElementById("welcome-text");
-            let selectedRepos=[],sortColumn=null,sortDirection=1;
-            modalCancel.addEventListener("click",function(){modal.style.display="none"});
-            modalConfirm.addEventListener("click",async function(){
-                modal.style.display="none";installBtn.style.pointerEvents="none";installBtn.style.opacity="0.6";welcomeText.textContent="⏳ Installing...";
-                try{
-                    const response=await fetch("/install",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repos:selectedRepos})});
-                    let data;try{data=await response.json()}catch(jsonErr){throw new Error("Server returned invalid JSON: "+response.status)}
-                    if(response.ok&&data.success){
-                        if(data.error)welcomeText.textContent+=" | ⚠️ Errors: "+data.error;
-                        if(data.installed_count!==undefined&&installedCountEl)installedCountEl.textContent="📁 Installed: "+data.installed_count;
-                        const output=data.output||"",installedMatch=output.match(/✅ Installation complete/g),skippedMatch=output.match(/⚠️.*already exists|⚠️.*Skipping/g);
-                        const installedCount=installedMatch?installedMatch.length:0,skippedCount=skippedMatch?skippedMatch.length:0;
-                        if(installedCount>0&&skippedCount>0)welcomeText.textContent=`✅ Installed: ${installedCount} | ⚠️ Skipped: ${skippedCount}`;
-                        else if(installedCount>0)welcomeText.textContent=`✅ Installed ${installedCount} project(s)`;
-                        else if(skippedCount>0)welcomeText.textContent=`⚠️ All ${skippedCount} project(s) already installed`;
-                        selectedRepos.forEach(url=>{const normalizedUrl=url.endsWith(".git")?url.slice(0,-4):url;const checkbox=document.querySelector(`.repo-checkbox[data-url="${normalizedUrl}"]`);if(checkbox)checkbox.closest("tr").classList.add("installed-row")});
-                        checkboxes.forEach(cb=>cb.checked=false);
-                    }else welcomeText.textContent="❌ Installation failed";
-                }catch(err){welcomeText.textContent="❌ Request failed: "+err.message}
-                installBtn.style.pointerEvents="auto";installBtn.style.opacity="1";
+            const settingsCells=document.querySelectorAll(".settings-cell"),installedCountEl=document.getElementById("installed-count"),modal=document.getElementById("confirm-modal"),modalRepoList=document.getElementById("modal-repo-list"),modalCancel=document.getElementById("modal-cancel"),modalConfirm=document.getElementById("modal-confirm"),welcomeText=document.getElementById("welcome-text");
+            let sortColumn=null,sortDirection=1,pendingInstall=null;
+            
+            // Toggle action row on settings cell click
+            settingsCells.forEach(cell=>{
+                cell.addEventListener("click",function(e){
+                    e.stopPropagation();
+                    
+                    const row=this.closest("tr");
+                    const repoName=this.dataset.repo;
+                    const repoUrl=this.dataset.url;
+                    const settingsBtn=this.querySelector(".settings-btn");
+                    const isActive=settingsBtn.classList.contains("active");
+                    
+                    // Reset all cells
+                    settingsCells.forEach(otherCell=>{
+                        const otherBtn=otherCell.querySelector(".settings-btn");
+                        otherBtn.classList.remove("active");
+                        const otherActionRow=otherCell.closest("tr").nextElementSibling;
+                        if(otherActionRow&&otherActionRow.classList.contains("action-row")){
+                            otherActionRow.classList.remove("show");
+                        }
+                    });
+                    
+                    // Toggle current
+                    if(!isActive){
+                        settingsBtn.classList.add("active");
+                        let actionRow=row.nextElementSibling;
+                        if(!actionRow||!actionRow.classList.contains("action-row")){
+                            actionRow=document.createElement("tr");
+                            actionRow.className="action-row";
+                            actionRow.id="bottom-panel-"+repoName;
+                            actionRow.innerHTML='<td colspan="6" class="action-cell"><button class="action-btn" data-action="install" data-name="'+repoName+'" data-url="'+repoUrl+'"><span class="action-btn-icon">📥</span><span class="action-btn-label">Install</span></button></td>';
+                            row.parentNode.insertBefore(actionRow,row.nextSibling);
+                        }
+                        actionRow.classList.add("show");
+                    }
+                });
             });
-            installBtn.addEventListener("click",async function(e){
+            
+            // Handle action button clicks
+            document.addEventListener("click",function(e){
+                const actionBtn=e.target.closest(".action-btn");
+                if(!actionBtn)return;
+                e.stopPropagation();
                 e.preventDefault();
-                selectedRepos=Array.from(document.querySelectorAll(".repo-checkbox:checked")).map(cb=>cb.dataset.url);
-                if(selectedRepos.length===0){alert("Please select at least one repository to install.");return}
-                const repoNames=Array.from(document.querySelectorAll(".repo-checkbox:checked")).map(cb=>cb.dataset.repo);
-                modalRepoList.textContent=repoNames.join("\n");modal.style.display="flex";
+                const action=actionBtn.dataset.action;
+                const repoName=actionBtn.dataset.name;
+                const repoUrl=actionBtn.dataset.url;
+                if(action==="install"){
+                    pendingInstall={name:repoName,url:repoUrl};
+                    modalRepoList.textContent=repoName;
+                    modal.style.display="flex";
+                }else if(action==="open"){
+                    // TODO: Add open logic here
+                }else if(action==="settings"){
+                    // TODO: Add settings logic here
+                }else if(action==="delete"){
+                    // TODO: Add delete logic here
+                }
             });
-            modal.addEventListener("click",function(e){if(e.target===modal)modal.style.display="none"});
+            
+            modalCancel.addEventListener("click",function(){modal.style.display="none";pendingInstall=null});
+            modalConfirm.addEventListener("click",async function(){
+                if(!pendingInstall)return;
+                modal.style.display="none";
+                welcomeText.textContent="⏳ Installing "+pendingInstall.name+"...";
+                try{
+                    const response=await fetch("/install",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repos:[pendingInstall.url]})});
+                    const data=await response.json();
+                    if(data.success){
+                        if(data.installed_count!==undefined&&installedCountEl)installedCountEl.textContent="📁 Installed: "+data.installed_count;
+                        welcomeText.textContent="✅ Installed "+pendingInstall.name;
+                        const settingsCell=document.querySelector(`.settings-cell[data-url="${pendingInstall.url}"]`);
+                        if(settingsCell){
+                            const settingsBtn=settingsCell.querySelector(".settings-btn");
+                            settingsBtn.classList.remove("active");
+                            settingsCell.closest("tr").classList.add("installed-row");
+                            const actionRow=settingsCell.closest("tr").nextElementSibling;
+                            if(actionRow&&actionRow.classList.contains("action-row"))actionRow.classList.remove("show");
+                        }
+                    }else{
+                        welcomeText.textContent="❌ Installation failed";
+                    }
+                }catch(err){
+                    welcomeText.textContent="❌ Request failed: "+err.message;
+                }
+                pendingInstall=null;
+            });
+            modal.addEventListener("click",function(e){if(e.target===modal){modal.style.display="none";pendingInstall=null}});
+            
             welcomeText.addEventListener("click",function(){welcomeText.textContent="Добро пожаловать, Мастер";welcomeText.className="welcome-text"});
             // Sorting functionality
             document.querySelectorAll("th.sortable").forEach(th=>{
