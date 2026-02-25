@@ -84,7 +84,7 @@
         </div>
     </div>
     <table>
-        <tr><th>Logo</th><th class="sortable" data-sort="name">Projets</th><th class="sortable" data-sort="url">URL</th><th class="sortable" data-sort="description">Description</th><th class="sortable" data-sort="created_at">Started</th></tr>
+        <tr><th>Logo</th><th class="sortable" data-sort="name">Projets</th><th class="sortable" data-sort="description">Description</th><th>URL</th><th class="sortable" data-sort="created_at">Started</th></tr>
         {% for repo in repos %}
         {% set normalized_url = repo.url[:-4] if repo.url.endswith('.git') else repo.url %}
         {% set normalized_url = normalized_url.rstrip('/') %}

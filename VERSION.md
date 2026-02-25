@@ -11,7 +11,7 @@ python run.py
 
 # UPDATE
 git add .
-git commit -m "v0.0.5 - added Projects Logos"
+git commit -m "v0.0.6 - added url to links"
 git push
 python run.py
 
@@ -21,3 +21,4 @@ v0.0.2 - added bottom panel
 v0.0.3 - added local folder delete
 v0.0.4 - added avatar
 v0.0.5 - added Projects Logos
+v0.0.6 - added url to links
