@@ -45,6 +45,7 @@ def index():
     load_dotenv()
     username = os.getenv("GITHUB_USERNAME", "Unknown")
     token = os.getenv("GITHUB_TOKEN", "")
+    message = request.args.get("message", "")
     # Fetch user avatar from GitHub API
     avatar_url = ""
     try:
@@ -60,12 +61,27 @@ def index():
     repos = sorted(data.get("repositories", []), key=lambda r: (r["name"] != username, r["name"].lower()))
     my_repos_dir = os.path.join(os.path.dirname(__file__), "MY_REPOS")
     installed_urls = get_installed_repo_urls(my_repos_dir)
-    return render_template("index.html", repos=repos, username=username, count=len(repos), installed_count=len(installed_urls), installed_repos=installed_urls, avatar_url=avatar_url)
+    return render_template("index.html", repos=repos, username=username, count=len(repos), installed_count=len(installed_urls), installed_repos=installed_urls, avatar_url=avatar_url, message=message)
 
 @app.route("/refresh")
 def refresh():
     subprocess.run(["python", "TOOLS/get_all_github_projects.py"], check=True)
     return redirect(url_for("index"))
+
+@app.route("/create-new")
+def create_new():
+    result = subprocess.run(["python", "MY_REPOS/Create-Project-Folder/create_new_project.py"],
+                           capture_output=True, text=True, check=True)
+    # Extract project name from output
+    output = result.stdout.strip()
+    # Parse "Project "folder_name" created successfully" to get folder_name
+    folder_name = ""
+    if 'Project "' in output and '" created' in output:
+        start = output.find('Project "') + len('Project "')
+        end = output.find('" created')
+        folder_name = output[start:end]
+    message = f'Project "{folder_name}" created successfully' if folder_name else "Project created successfully"
+    return redirect(url_for("index", message=message))
 
 @app.route("/install", methods=["POST"])
 def install():
