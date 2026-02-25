@@ -116,7 +116,6 @@
         .repo-logo{width:40px;height:40px;border-radius:50%;object-fit:cover}
         .name-cell{cursor:pointer}
         .name-cell:hover{background:#404040}
-        .name-cell.active{background:#1b3320}
         .private-cell{cursor:pointer;color:#4CAF50;text-align:center;vertical-align:middle}
         .private-cell:hover{background:#404040}
     </style>
@@ -184,7 +183,6 @@
 
                 // Toggle current
                 if(!isActive){
-                    cell.classList.add("active");
                     let actionRow=row.nextElementSibling;
                     const isInstalled=row.classList.contains("installed-row");
                     const isNewProject=row.classList.contains("new-project-row");
@@ -192,9 +190,13 @@
                         actionRow=document.createElement("tr");
                         actionRow.className="action-row";
                         actionRow.id="bottom-panel-"+repoName;
-                        // Show Delete for installed rows and new projects, Install for non-installed
+                        // Show Delete+Rename for new projects, Delete for installed, Install for non-installed
                         if(isInstalled||isNewProject){
-                            actionRow.innerHTML='<td colspan="'+totalColumns+'" class="action-cell"><button class="action-btn" data-action="delete" data-name="'+repoName+'" data-url="'+repoUrl+'"><span class="action-btn-icon">🗑️</span><span class="action-btn-label">Delete</span></button></td>';
+                            if(isNewProject){
+                                actionRow.innerHTML='<td colspan="'+totalColumns+'" class="action-cell"><button class="action-btn" data-action="delete" data-name="'+repoName+'" data-url="'+repoUrl+'"><span class="action-btn-icon">🗑️</span><span class="action-btn-label">Delete</span></button><button class="action-btn" data-action="rename" data-name="'+repoName+'" data-url="'+repoUrl+'"><span class="action-btn-icon">✏️</span><span class="action-btn-label">Rename</span></button></td>';
+                            }else{
+                                actionRow.innerHTML='<td colspan="'+totalColumns+'" class="action-cell"><button class="action-btn" data-action="delete" data-name="'+repoName+'" data-url="'+repoUrl+'"><span class="action-btn-icon">🗑️</span><span class="action-btn-label">Delete</span></button></td>';
+                            }
                         }else{
                             actionRow.innerHTML='<td colspan="'+totalColumns+'" class="action-cell"><button class="action-btn" data-action="install" data-name="'+repoName+'" data-url="'+repoUrl+'"><span class="action-btn-icon">📥</span><span class="action-btn-label">Install</span></button></td>';
                         }
@@ -221,12 +223,75 @@
                     pendingDelete={name:repoName,url:repoUrl};
                     modalDeleteRepoList.textContent=repoName;
                     deleteModal.style.display="flex";
+                }else if(action==="rename"){
+                    const nameCell=document.querySelector(`.name-cell[data-repo="${repoName}"]`);
+                    if(nameCell){
+                        makeCellEditable(nameCell);
+                    }
                 }else if(action==="open"){
                     window.open(repoUrl,"_blank");
                 }else if(action==="settings"){
                     window.open(repoUrl,"_blank");
                 }
             });
+
+            // Make cell editable and save on blur
+            function makeCellEditable(cell){
+                const originalName=cell.dataset.repo;
+                const input=document.createElement("input");
+                input.type="text";
+                input.value=originalName;
+                input.style.width="90%";
+                input.style.padding="4px";
+                input.style.background="#404040";
+                input.style.color="#e0e0e0";
+                input.style.border="1px solid #4CAF50";
+                input.style.borderRadius="4px";
+                input.style.fontSize="inherit";
+                input.style.fontFamily="inherit";
+                
+                cell.textContent="";
+                cell.appendChild(input);
+                input.focus();
+                input.select();
+                
+                async function saveValue(){
+                    const newName=input.value.trim();
+                    if(newName&&newName!==originalName){
+                        try{
+                            const response=await fetch("/rename",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({old_name:originalName,new_name:newName})});
+                            const data=await response.json();
+                            if(data.success){
+                                cell.textContent=newName;
+                                cell.dataset.repo=newName;
+                                // Close action row
+                                const actionRow=cell.closest("tr").nextElementSibling;
+                                if(actionRow&&actionRow.classList.contains("action-row")){
+                                    actionRow.classList.remove("show");
+                                }
+                                welcomeText.textContent="✅ Renamed to "+newName;
+                            }else{
+                                welcomeText.textContent="❌ Rename failed: "+data.error;
+                                cell.textContent=originalName;
+                            }
+                        }catch(err){
+                            welcomeText.textContent="❌ Request failed: "+err.message;
+                            cell.textContent=originalName;
+                        }
+                    }else{
+                        cell.textContent=originalName;
+                    }
+                }
+                
+                input.addEventListener("blur",saveValue);
+                input.addEventListener("keydown",function(e){
+                    if(e.key==="Enter"){
+                        input.blur();
+                    }else if(e.key==="Escape"){
+                        cell.textContent=originalName;
+                    }
+                });
+            }
 
             modalCancel.addEventListener("click",function(){modal.style.display="none";pendingInstall=null});
             modalConfirm.addEventListener("click",async function(){

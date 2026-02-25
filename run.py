@@ -152,5 +152,25 @@ def delete():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/rename", methods=["POST"])
+def rename():
+    data = request.get_json()
+    old_name = data.get("old_name", "")
+    new_name = data.get("new_name", "")
+    if not old_name or not new_name:
+        return jsonify({"error": "Old name and new name are required"}), 400
+    try:
+        new_projects_dir = os.path.join(os.path.dirname(__file__), "NEW_PROJECTS")
+        old_path = os.path.join(new_projects_dir, old_name)
+        new_path = os.path.join(new_projects_dir, new_name)
+        if not os.path.exists(old_path):
+            return jsonify({"error": f"Folder '{old_name}' not found"}), 404
+        if os.path.exists(new_path):
+            return jsonify({"error": f"Folder '{new_name}' already exists"}), 400
+        os.rename(old_path, new_path)
+        return jsonify({"success": True, "old_name": old_name, "new_name": new_name})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(port=5000, use_reloader=False)
