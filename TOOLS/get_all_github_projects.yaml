@@ -1,0 +1,211 @@
+repositories:
+- name: 00-STUDY
+  url: https://github.com/israice/00-STUDY
+  private: false
+  description: null
+  created_at: '2025-04-25T03:23:23Z'
+- name: ADD-DOMAIN-TO-WINDOWS
+  url: https://github.com/israice/ADD-DOMAIN-TO-WINDOWS
+  private: false
+  description: null
+  created_at: '2025-05-14T10:45:14Z'
+- name: Android-WebView-Auto-Builder
+  url: https://github.com/israice/Android-WebView-Auto-Builder
+  private: false
+  description: Turn any URL into an APK in seconds. Zero Setup. No Android Studio.
+    No Java installation required. No headaches. Just run the script, and get your
+    APK.
+  created_at: '2025-12-11T13:08:08Z'
+- name: Autotrade-Based-Line
+  url: https://github.com/israice/Autotrade-Based-Line
+  private: false
+  description: null
+  created_at: '2025-06-28T23:14:18Z'
+- name: BUY-ON-SECOND-CANDLE
+  url: https://github.com/israice/BUY-ON-SECOND-CANDLE
+  private: false
+  description: null
+  created_at: '2025-09-03T14:10:20Z'
+- name: card-game-based-n8n
+  url: https://github.com/israice/card-game-based-n8n
+  private: false
+  description: null
+  created_at: '2025-04-28T19:38:56Z'
+- name: copy-tab-url-to-airtable
+  url: https://github.com/israice/copy-tab-url-to-airtable
+  private: false
+  description: null
+  created_at: '2025-05-08T01:34:03Z'
+- name: CrazyWalk-Game
+  url: https://github.com/israice/CrazyWalk-Game
+  private: false
+  description: CrazyWalk is a geolocation-based exploration and territory capture
+    game. Navigate real-world streets, collect items, and complete polygons to expand
+    your map.
+  created_at: '2025-12-11T06:00:41Z'
+- name: Create-Project-Folder
+  url: https://github.com/israice/Create-Project-Folder
+  private: false
+  description: A minimalistic Python tool to generate a structured project folder
+    with pre-filled templates for backend, frontend, data, and configuration files.
+    Just run and code — your workspace is ready in seconds!
+  created_at: '2025-05-08T02:16:52Z'
+- name: flask-cards
+  url: https://github.com/israice/flask-cards
+  private: false
+  description: null
+  created_at: '2025-05-03T03:49:45Z'
+- name: flask-with-google-auth
+  url: https://github.com/israice/flask-with-google-auth
+  private: false
+  description: null
+  created_at: '2025-05-03T01:05:15Z'
+- name: gemma-on-local-network
+  url: https://github.com/israice/gemma-on-local-network
+  private: false
+  description: null
+  created_at: '2025-10-09T20:05:16Z'
+- name: get-special-url-using-chrome-extension
+  url: https://github.com/israice/get-special-url-using-chrome-extension
+  private: false
+  description: null
+  created_at: '2025-05-10T13:39:15Z'
+- name: Github-Badge-Quest
+  url: https://github.com/israice/Github-Badge-Quest
+  private: false
+  description: 'Comprehensive, fan-made guide that teaches you how to unlock all the
+    special badges, called "Achievements," on your GitHub profile. The site provides
+    step-by-step tutorials for earning specific achievements like "Quickdraw" and
+    "Pull Shark," and includes a full list of available badges. '
+  created_at: '2025-10-18T05:15:38Z'
+- name: HTML-LiveStream-TV-Wall
+  url: https://github.com/israice/HTML-LiveStream-TV-Wall
+  private: false
+  description: '  Minimalistic HLS dashboard built with pure HTML, CSS & JS.'
+  created_at: '2025-06-24T20:44:51Z'
+- name: Inkasio-the-fastest-cash
+  url: https://github.com/israice/Inkasio-the-fastest-cash
+  private: false
+  description: null
+  created_at: '2025-05-13T15:21:36Z'
+- name: israice
+  url: https://github.com/israice/israice
+  private: false
+  description: null
+  created_at: '2025-10-18T02:00:42Z'
+- name: Job-Finder-Tool
+  url: https://github.com/israice/Job-Finder-Tool
+  private: false
+  description: null
+  created_at: '2025-06-25T04:53:50Z'
+- name: js_lessons
+  url: https://github.com/israice/js_lessons
+  private: false
+  description: null
+  created_at: '2025-05-26T14:16:29Z'
+- name: lingo-boost
+  url: https://github.com/israice/lingo-boost
+  private: false
+  description: null
+  created_at: '2025-10-14T22:23:34Z'
+- name: LMSTUDIO-System
+  url: https://github.com/israice/LMSTUDIO-System
+  private: false
+  description: null
+  created_at: '2025-05-06T04:55:01Z'
+- name: Master-Ultimate-Cheatsheet
+  url: https://github.com/israice/Master-Ultimate-Cheatsheet
+  private: false
+  description: This is a public repository that serves as a collection of cheat sheets
+    and examples for web developers. The project aims to provide ready-to-use code
+    snippets (copy-paste) to speed up development.
+  created_at: '2025-10-17T04:17:50Z'
+- name: PieHook
+  url: https://github.com/israice/PieHook
+  private: false
+  description: null
+  created_at: '2026-01-05T23:25:07Z'
+- name: Python-PancakeSwap-Prediction-Auto-Clicker
+  url: https://github.com/israice/Python-PancakeSwap-Prediction-Auto-Clicker
+  private: false
+  description: null
+  created_at: '2025-09-14T20:29:15Z'
+- name: SecurityLayer-Dashboard
+  url: https://github.com/israice/SecurityLayer-Dashboard
+  private: false
+  description: null
+  created_at: '2026-01-25T23:47:52Z'
+- name: server-docker-with-github-update
+  url: https://github.com/israice/server-docker-with-github-update
+  private: false
+  description: null
+  created_at: '2026-02-02T04:55:32Z'
+- name: sharepoint-video-downloader
+  url: https://github.com/israice/sharepoint-video-downloader
+  private: false
+  description: null
+  created_at: '2025-05-10T15:05:20Z'
+- name: Simple-SPA-Example
+  url: https://github.com/israice/Simple-SPA-Example
+  private: false
+  description: A simple, lightweight, and reliable Single Page Application (SPA) boilerplate
+    designed to work flawlessly on GitHub Pages. This project demonstrates how to
+    build a modern SPA without complex frameworks, using only vanilla JavaScript,
+    HTML, and CSS. It's a great starting point for personal websites or project documentation
+  created_at: '2025-10-18T00:52:03Z'
+- name: Telegram-IOU-Tracker
+  url: https://github.com/israice/Telegram-IOU-Tracker
+  private: false
+  description: Ever lose track of who owes you money? Or who you owe? This little
+    bot is your new best friend!
+  created_at: '2025-10-23T14:36:46Z'
+- name: test1
+  url: https://github.com/israice/test1
+  private: false
+  description: null
+  created_at: '2025-05-18T17:30:59Z'
+- name: ToDo-Game
+  url: https://github.com/israice/ToDo-Game
+  private: false
+  description: null
+  created_at: '2026-02-01T23:53:50Z'
+- name: TODO-Game-From-TELEGRAM
+  url: https://github.com/israice/TODO-Game-From-TELEGRAM
+  private: false
+  description: null
+  created_at: '2026-02-24T01:39:48Z'
+- name: tvlists
+  url: https://github.com/israice/tvlists
+  private: true
+  description: null
+  created_at: '2026-02-06T08:49:35Z'
+- name: two-ajax-blocks
+  url: https://github.com/israice/two-ajax-blocks
+  private: false
+  description: null
+  created_at: '2025-07-03T23:01:08Z'
+- name: Universal-CV
+  url: https://github.com/israice/Universal-CV
+  private: false
+  description: null
+  created_at: '2025-06-22T17:51:32Z'
+- name: users-db
+  url: https://github.com/israice/users-db
+  private: false
+  description: null
+  created_at: '2026-02-01T04:25:09Z'
+- name: VTT-Voice-To-Text
+  url: https://github.com/israice/VTT-Voice-To-Text
+  private: false
+  description: null
+  created_at: '2025-06-28T10:09:28Z'
+- name: wfork-n8n-json-collection
+  url: https://github.com/israice/wfork-n8n-json-collection
+  private: false
+  description: null
+  created_at: '2025-06-16T16:24:55Z'
+- name: WFORK-TAB
+  url: https://github.com/israice/WFORK-TAB
+  private: false
+  description: null
+  created_at: '2025-05-31T22:06:56Z'

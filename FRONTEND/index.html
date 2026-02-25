@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GitHub Repositories</title>
+    <style>
+        body{font-family:Arial,sans-serif;padding:20px}
+        .navbar{background:#333;padding:10px 20px 0;margin:-20px -20px 0;display:flex;gap:10px}
+        .navbar a{color:#fff;text-decoration:none;padding:8px 16px;border-radius:4px}
+        .navbar a:hover{background:#555}
+        .header{background:#333;padding:0 20px 10px;margin:0 -20px 20px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+        .header a{color:#fff;text-decoration:none;padding:8px 16px;border-radius:4px}
+        .header a:hover{background:#555}
+        .welcome-text{color:#0f0;font-weight:700;font-family:'Courier New',monospace;font-size:16px}
+        table{border-collapse:collapse;width:100%}
+        th,td{border:1px solid #ddd;padding:8px;text-align:left}
+        th{background:#4CAF50;color:#fff}
+        tr:nth-child(even){background:#f2f2f2}
+        .profile-repo{background:#fff3cd!important;font-weight:700}
+        .profile-repo td{border:2px solid #ffc107}
+        .installed-row{background:#d4edda!important}
+        .installed-row td{border-color:#28a745}
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:1000}
+        .modal{background:#fff;padding:25px;border-radius:8px;max-width:500px;width:90%;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+        .modal h3{margin:0 0 15px;color:#333}
+        .modal-body{background:#f5f5f5;padding:15px;border-radius:4px;margin:15px 0;max-height:200px;overflow-y:auto;font:13px monospace}
+        .modal-buttons{display:flex;gap:10px;justify-content:flex-end}
+        .modal-btn{padding:10px 20px;border:none;border-radius:4px;cursor:pointer;font-size:14px}
+        .modal-btn-cancel{background:#6c757d;color:#fff}
+        .modal-btn-cancel:hover{background:#5a6268}
+        .modal-btn-confirm{background:#28a745;color:#fff}
+        .modal-btn-confirm:hover{background:#218838}
+        th.sortable{cursor:pointer;user-select:none}
+        th.sortable:hover{background:#5CAF50}
+        th.sort-asc::after{content:" ▲";font-size:12px}
+        th.sort-desc::after{content:" ▼";font-size:12px}
+    </style>
+</head>
+<body>
+    <div id="panel-1" class="navbar">
+        <a href="#">👨 User: {{ username }}</a>
+        <a href="#">📦 Repos: {{ count }}</a>
+        <a href="#" id="installed-count">📁 Installed: {{ installed_count }}</a>
+    </div>
+    <div id="panel-2" class="header">
+        <span class="welcome-text" id="welcome-text">Добро пожаловать, Мастер</span>
+        <div class="header-buttons">
+            <a href="#" id="install-btn">📥 Install</a>
+            <a href="/refresh">🔄 Refresh</a>
+        </div>
+    </div>
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal">
+            <h3>Confirm Installation</h3>
+            <div class="modal-body" id="modal-repo-list"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="modal-cancel">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" id="modal-confirm">Install</button>
+            </div>
+        </div>
+    </div>
+    <table>
+        <tr><th></th><th class="sortable" data-sort="name">Name</th><th class="sortable" data-sort="url">URL</th><th class="sortable" data-sort="private">Private</th><th class="sortable" data-sort="description">Description</th><th class="sortable" data-sort="created_at">Created</th></tr>
+        {% for repo in repos %}
+        {% set normalized_url = repo.url[:-4] if repo.url.endswith('.git') else repo.url %}
+        {% set normalized_url = normalized_url.rstrip('/') %}
+        <tr{% if repo.name == username %} class="profile-repo"{% elif normalized_url in installed_repos %} class="installed-row"{% endif %}>
+            <td><input type="checkbox" class="repo-checkbox" data-repo="{{ repo.name }}" data-url="{{ repo.url }}" title="Select {{ repo.name }}"></td>
+            <td>{{ repo.name }}</td>
+            <td><a href="{{ repo.url }}" target="_blank">{{ repo.url }}</a></td>
+            <td>{{ "✓" if repo.private else "" }}</td>
+            <td>{{ repo.description or "" }}</td>
+            <td>{{ repo.created_at[:10] if repo.created_at and repo.created_at else "" }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <script>
+        document.addEventListener("DOMContentLoaded",function(){
+            const checkboxes=document.querySelectorAll(".repo-checkbox"),installBtn=document.getElementById("install-btn"),installedCountEl=document.getElementById("installed-count"),modal=document.getElementById("confirm-modal"),modalRepoList=document.getElementById("modal-repo-list"),modalCancel=document.getElementById("modal-cancel"),modalConfirm=document.getElementById("modal-confirm"),welcomeText=document.getElementById("welcome-text");
+            let selectedRepos=[],sortColumn=null,sortDirection=1;
+            modalCancel.addEventListener("click",function(){modal.style.display="none"});
+            modalConfirm.addEventListener("click",async function(){
+                modal.style.display="none";installBtn.style.pointerEvents="none";installBtn.style.opacity="0.6";welcomeText.textContent="⏳ Installing...";
+                try{
+                    const response=await fetch("/install",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({repos:selectedRepos})});
+                    let data;try{data=await response.json()}catch(jsonErr){throw new Error("Server returned invalid JSON: "+response.status)}
+                    if(response.ok&&data.success){
+                        if(data.error)welcomeText.textContent+=" | ⚠️ Errors: "+data.error;
+                        if(data.installed_count!==undefined&&installedCountEl)installedCountEl.textContent="📁 Installed: "+data.installed_count;
+                        const output=data.output||"",installedMatch=output.match(/✅ Installation complete/g),skippedMatch=output.match(/⚠️.*already exists|⚠️.*Skipping/g);
+                        const installedCount=installedMatch?installedMatch.length:0,skippedCount=skippedMatch?skippedMatch.length:0;
+                        if(installedCount>0&&skippedCount>0)welcomeText.textContent=`✅ Installed: ${installedCount} | ⚠️ Skipped: ${skippedCount}`;
+                        else if(installedCount>0)welcomeText.textContent=`✅ Installed ${installedCount} project(s)`;
+                        else if(skippedCount>0)welcomeText.textContent=`⚠️ All ${skippedCount} project(s) already installed`;
+                        selectedRepos.forEach(url=>{const normalizedUrl=url.endsWith(".git")?url.slice(0,-4):url;const checkbox=document.querySelector(`.repo-checkbox[data-url="${normalizedUrl}"]`);if(checkbox)checkbox.closest("tr").classList.add("installed-row")});
+                        checkboxes.forEach(cb=>cb.checked=false);
+                    }else welcomeText.textContent="❌ Installation failed";
+                }catch(err){welcomeText.textContent="❌ Request failed: "+err.message}
+                installBtn.style.pointerEvents="auto";installBtn.style.opacity="1";
+            });
+            installBtn.addEventListener("click",async function(e){
+                e.preventDefault();
+                selectedRepos=Array.from(document.querySelectorAll(".repo-checkbox:checked")).map(cb=>cb.dataset.url);
+                if(selectedRepos.length===0){alert("Please select at least one repository to install.");return}
+                const repoNames=Array.from(document.querySelectorAll(".repo-checkbox:checked")).map(cb=>cb.dataset.repo);
+                modalRepoList.textContent=repoNames.join("\n");modal.style.display="flex";
+            });
+            modal.addEventListener("click",function(e){if(e.target===modal)modal.style.display="none"});
+            welcomeText.addEventListener("click",function(){welcomeText.textContent="Добро пожаловать, Мастер";welcomeText.className="welcome-text"});
+            // Sorting functionality
+            document.querySelectorAll("th.sortable").forEach(th=>{
+                th.addEventListener("click",function(){
+                    const column=this.dataset.sort;
+                    const table=this.closest("table");
+                    const rows=Array.from(table.querySelectorAll("tr"));
+                    if(sortColumn===column){sortDirection=-sortDirection}else{sortColumn=column;sortDirection=1}
+                    document.querySelectorAll("th.sortable").forEach(h=>h.classList.remove("sort-asc","sort-desc"));
+                    this.classList.add(sortDirection===1?"sort-asc":"sort-desc");
+                    rows.sort((a,b)=>{
+                        let aVal,bVal;
+                        if(column==="name"){aVal=a.cells[0].textContent.trim();bVal=b.cells[0].textContent.trim();}
+                        else if(column==="url"){aVal=a.cells[1].textContent.trim();bVal=b.cells[1].textContent.trim();}
+                        else if(column==="private"){aVal=a.cells[2].textContent.trim()?"1":"";bVal=b.cells[2].textContent.trim()?"1":"";}
+                        else if(column==="description"){aVal=a.cells[3].textContent.trim();bVal=b.cells[3].textContent.trim();}
+                        else if(column==="created_at"){aVal=a.cells[4].textContent.trim();bVal=b.cells[4].textContent.trim();}
+                        else{return 0;}
+                        if(aVal<bVal)return -1*sortDirection;if(aVal>bVal)return 1*sortDirection;return 0;
+                    });
+                    rows.forEach(row=>table.appendChild(row))
+                })
+            });
+        });
+    </script>
+</body>
+</html>
