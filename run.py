@@ -40,6 +40,34 @@ def get_installed_repo_urls(my_repos_dir):
             pass
     return installed_urls
 
+def get_new_projects(new_projects_dir):
+    """Get list of new projects from NEW_PROJECTS directory."""
+    projects = []
+    if not os.path.exists(new_projects_dir):
+        return projects
+    for folder in os.listdir(new_projects_dir):
+        folder_path = os.path.join(new_projects_dir, folder)
+        if not os.path.isdir(folder_path):
+            continue
+        # Get creation time from folder
+        try:
+            created_timestamp = os.path.getctime(folder_path)
+            from datetime import datetime
+            created_at = datetime.fromtimestamp(created_timestamp).isoformat() + 'Z'
+        except Exception:
+            created_at = ""
+        # Build project URL (local path, no GitHub URL)
+        project_url = folder_path.replace('\\', '/')
+        projects.append({
+            "name": folder,
+            "url": project_url,
+            "private": False,
+            "description": "Local project folder",
+            "created_at": created_at,
+            "is_new_project": True  # Flag to identify new projects
+        })
+    return projects
+
 @app.route("/")
 def index():
     load_dotenv()
@@ -61,7 +89,12 @@ def index():
     repos = sorted(data.get("repositories", []), key=lambda r: (r["name"] != username, r["name"].lower()))
     my_repos_dir = os.path.join(os.path.dirname(__file__), "MY_REPOS")
     installed_urls = get_installed_repo_urls(my_repos_dir)
-    return render_template("index.html", repos=repos, username=username, count=len(repos), installed_count=len(installed_urls), installed_repos=installed_urls, avatar_url=avatar_url, message=message)
+    # Get new projects from NEW_PROJECTS directory
+    new_projects_dir = os.path.join(os.path.dirname(__file__), "NEW_PROJECTS")
+    new_projects = get_new_projects(new_projects_dir)
+    # Combine GitHub repos and new projects
+    all_projects = repos + new_projects
+    return render_template("index.html", repos=all_projects, username=username, count=len(repos), installed_count=len(installed_urls), installed_repos=installed_urls, avatar_url=avatar_url, message=message)
 
 @app.route("/refresh")
 def refresh():
@@ -110,8 +143,10 @@ def delete():
         timeout = 60 * len(repo_names)
         result = subprocess.run(["python", "TOOLS/delete_local_folder.py"] + repo_names, capture_output=True, text=True, check=False, timeout=timeout, encoding="utf-8")
         my_repos_dir = os.path.join(os.path.dirname(__file__), "MY_REPOS")
+        new_projects_dir = os.path.join(os.path.dirname(__file__), "NEW_PROJECTS")
         installed_count = len([d for d in os.listdir(my_repos_dir) if os.path.isdir(os.path.join(my_repos_dir, d))]) if os.path.exists(my_repos_dir) else 0
-        return jsonify({"success": True, "output": result.stdout, "error": result.stderr if result.returncode != 0 else None, "installed_count": installed_count})
+        new_projects_count = len([d for d in os.listdir(new_projects_dir) if os.path.isdir(os.path.join(new_projects_dir, d))]) if os.path.exists(new_projects_dir) else 0
+        return jsonify({"success": True, "output": result.stdout, "error": result.stderr if result.returncode != 0 else None, "installed_count": installed_count, "new_projects_count": new_projects_count})
     except subprocess.TimeoutExpired:
         return jsonify({"error": "Deletion timed out."}), 504
     except Exception as e:

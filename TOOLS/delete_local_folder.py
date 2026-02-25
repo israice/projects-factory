@@ -7,20 +7,26 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-def delete_repository(repo_name: str, my_repos_dir: Path) -> tuple[str, str, str]:
-    """Delete a repository folder from MY_REPOS directory.
-    
+def delete_repository(repo_name: str, my_repos_dir: Path, new_projects_dir: Optional[Path] = None) -> tuple[str, str, str]:
+    """Delete a repository folder from MY_REPOS or NEW_PROJECTS directory.
+
     Args:
         repo_name: Name of the repository folder to delete
         my_repos_dir: Path to the MY_REPOS directory
-        
+        new_projects_dir: Optional path to the NEW_PROJECTS directory
+
     Returns:
         Tuple of (repo_name, status, message)
     """
+    # First check MY_REPOS
     target_path = my_repos_dir / repo_name
     
+    # If not found in MY_REPOS, check NEW_PROJECTS
+    if not target_path.exists() and new_projects_dir:
+        target_path = new_projects_dir / repo_name
+    
     if not target_path.exists():
-        return repo_name, "not_found", f"Directory '{target_path}' does not exist."
+        return repo_name, "not_found", f"Directory '{repo_name}' does not exist in MY_REPOS or NEW_PROJECTS."
     
     if not target_path.is_dir():
         return repo_name, "error", f"'{target_path}' is not a directory."
@@ -53,15 +59,16 @@ def main(repo_names: Optional[list[str]] = None) -> list[dict]:
     script_dir = Path(__file__).parent
     project_root = script_dir.parent
     my_repos_dir = project_root / "MY_REPOS"
-    
+    new_projects_dir = project_root / "NEW_PROJECTS"
+
     if repo_names is None:
         print("❌ No repository names provided.")
         return []
-    
+
     results = []
     for repo_name in repo_names:
         print("-" * 60)
-        name, status, message = delete_repository(repo_name, my_repos_dir)
+        name, status, message = delete_repository(repo_name, my_repos_dir, new_projects_dir)
         results.append({"name": name, "status": status, "message": message})
         
         if status == "success":
