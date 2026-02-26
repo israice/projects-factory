@@ -66,6 +66,7 @@
         th.no-sort { cursor: default; }
         th.no-sort:hover { background: #2e7d32; }
         .rownum-cell { text-align: center; width: 56px; color: #bdbdbd; }
+        .rownum-cell:hover { cursor: default; }
         tr { background: #1e1e1e; }
         .installed-row { background: #1a3a1a; }
         .new-project-row { background: #3a2a1a; }
@@ -231,6 +232,7 @@
         const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace(/\/$/, '');
         const LAST_URL_ROW_KEY = 'projectsFactory:lastUrlRowNo';
         const LOCAL_DESC_KEY = 'projectsFactory:localDescriptions';
+        const DEFAULT_PUSH_MESSAGE = '';
 
         function readLocalDescriptions() {
             try {
@@ -348,21 +350,6 @@
             return Number.isFinite(ts) ? ts : -1;
         }
 
-        function startLiveReload() {
-            let stamp = '';
-            setInterval(async () => {
-                try {
-                    const r = await fetch(`${window.location.pathname}?_lr=${Date.now()}`, { cache: 'no-store' });
-                    if (!r.ok) return;
-                    const html = await r.text();
-                    const next = `${html.length}|${html.slice(0, 120)}|${html.slice(-120)}`;
-                    if (!next) return;
-                    if (!stamp) { stamp = next; return; }
-                    if (next !== stamp) window.location.reload();
-                } catch {}
-            }, 1500);
-        }
-
         // State
         const State = {
             username: '', avatarUrl: '', installedCount: 0, repos: [], count: 0,
@@ -370,6 +357,7 @@
             localOnlyCount: 0,
             lastLaunchedRowNo: null,
             localDescriptions: {},
+            defaultPushMessage: DEFAULT_PUSH_MESSAGE,
 
             async init() {
                 const [config, reposData] = await Promise.all([
@@ -379,6 +367,7 @@
                 this.username = config.username;
                 this.avatarUrl = config.avatar_url;
                 this.installedCount = config.installed_count;
+                this.defaultPushMessage = String(config.default_push_message || '').trim() || DEFAULT_PUSH_MESSAGE;
                 const repos = reposData.repos || [];
                 const orderedForRowNo = [...repos].sort((a, b) => {
                     const dt = getCreatedAtMs(b.created_at) - getCreatedAtMs(a.created_at);
@@ -447,6 +436,7 @@
             get: (endpoint) => API.request(endpoint, { method: 'GET' }),
             post: (endpoint, body) => API.request(endpoint, { method: 'POST', body: JSON.stringify(body) }),
             installRepos: (urls) => API.post('/api/install', { repos: urls }),
+            pushRepo: (path, message) => API.post('/api/push', { path, message }),
             addToGithub: (name, description, visibility = 'public') => API.post('/api/add-to-github', { name, description, visibility }),
             deleteRepos: (names) => API.post('/api/delete', { repos: names }),
             deleteGithubRepo: (name) => API.post('/api/delete-github', { name }),
@@ -454,6 +444,7 @@
             renameGithub: (old, new_) => API.post('/api/rename-github', { old_name: old, new_name: new_ }),
             updateDescription: (name, description) => API.post('/api/update-description', { name, description }),
             openFolder: (path) => API.post('/api/open-folder', { path }),
+            openFolderExplorer: (path) => API.post('/api/open-folder-explorer', { path }),
             createProject: () => API.post('/api/create-project')
         };
 
@@ -595,6 +586,7 @@
                     tr.dataset.url = repo.url;
                     tr.dataset.isNew = isNew;
                     tr.dataset.installed = installed;
+                    tr.dataset.canPush = repo.can_push ? 'true' : 'false';
                     tr.innerHTML = `
                         <td class="rownum-cell">${repo.__rowNo || ''}</td>
                         <td class="logo-cell" data-repo="${this.escape(repo.name)}" data-url="${this.escape(repo.url)}"><span class="logo-icon">📦</span></td>
@@ -614,6 +606,7 @@
                 const url = cell.dataset.url;
                 const isNew = row.dataset.isNew === 'true';
                 const installed = row.dataset.installed === 'true';
+                const canPush = row.dataset.canPush === 'true';
                 const active = cell.classList.contains('active');
 
                 this.closeAllActionRows(cell);
@@ -624,7 +617,16 @@
                     actionRow.className = 'action-row show';
                     let buttons = '';
                     if (isNew) {
+                        const pushBtn = canPush
+                            ? `<button class="action-btn" data-action="push" data-name="${this.escape(name)}" data-url="${this.escape(url)}">⬆️ Push</button>`
+                            : '';
+                        const repoBtn = isHttpUrl(url)
+                            ? `<button class="action-btn" data-action="open-repository" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🌐 Repository</button>`
+                            : '';
                         buttons = `
+                            <button class="action-btn" data-action="open-folder" data-name="${this.escape(name)}" data-url="${this.escape(url)}">📂 Folder</button>
+                            ${repoBtn}
+                            ${pushBtn}
                             <select class="action-visibility" data-action="visibility">
                                 <option value="public" selected>Public</option>
                                 <option value="private">Private</option>
@@ -633,7 +635,16 @@
                             <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Local Delete</button>
                         `;
                     } else if (installed) {
+                        const pushBtn = canPush
+                            ? `<button class="action-btn" data-action="push" data-name="${this.escape(name)}" data-url="${this.escape(url)}">⬆️ Push</button>`
+                            : '';
+                        const repoBtn = isHttpUrl(url)
+                            ? `<button class="action-btn" data-action="open-repository" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🌐 Repository</button>`
+                            : '';
                         buttons = `
+                            <button class="action-btn" data-action="open-folder" data-name="${this.escape(name)}" data-url="${this.escape(url)}">📂 Folder</button>
+                            ${repoBtn}
+                            ${pushBtn}
                             <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Local Delete</button>
                             <button class="action-btn" data-action="delete-github" data-name="${this.escape(name)}" data-url="${this.escape(url)}">☁️ Delete from GitHub</button>
                         `;
@@ -757,6 +768,21 @@
             }
         }
 
+        async function handlePushConfirm(repo) {
+            closeActionRow(repo.url);
+            UI.showWelcome('⏳ Updating VERSION.md and pushing ' + repo.name + '...');
+            try {
+                await API.pushRepo(repo.url, '');
+                const row = document.querySelector(`tr[data-url="${CSS.escape(repo.url)}"]`);
+                if (row) row.dataset.canPush = 'false';
+                const stateItem = State.repos.find(r => r.name === repo.name && r.url === repo.url);
+                if (stateItem) stateItem.can_push = false;
+                UI.showWelcome('✅ Push completed for ' + repo.name);
+            } catch (e) {
+                UI.showWelcome('❌ Push failed: ' + e.message);
+            }
+        }
+
         async function launchRepoFromUrlAction(repo, rowNo, isLocal) {
             if (!repo || !repo.url) return;
             if (isLocal) {
@@ -796,6 +822,10 @@
                 Number(next.__rowNo),
                 !!next.is_new_project
             );
+        }
+
+        function isHttpUrl(value = '') {
+            return /^https?:\/\//i.test(String(value || '').trim());
         }
 
         function makeEditable(cell, name, url, endpoint) {
@@ -929,7 +959,6 @@
 
         // Event Listeners
         document.addEventListener('DOMContentLoaded', async () => {
-            startLiveReload();
             ConfirmDialog.init();
             UI.init();
             try {
@@ -1014,6 +1043,27 @@
                         const vis = visibilitySelect && visibilitySelect.value === 'private' ? 'private' : 'public';
                         await handleAddToGithubConfirm(repo, vis);
                     }
+                    else if (action === 'push') {
+                        await handlePushConfirm(repo);
+                    }
+                    else if (action === 'open-folder') {
+                        try {
+                            await API.openFolderExplorer(repo.url || repo.name);
+                            UI.showWelcome('✅ Folder opened');
+                            closeActionRow(repo.url);
+                        } catch (e) {
+                            UI.showWelcome('❌ Open failed: ' + e.message);
+                        }
+                    }
+                    else if (action === 'open-repository') {
+                        if (!isHttpUrl(repo.url)) {
+                            UI.showWelcome('❌ GitHub link not found');
+                            return;
+                        }
+                        window.open(repo.url, '_blank', 'noopener');
+                        UI.showWelcome('✅ Repository opened');
+                        closeActionRow(repo.url);
+                    }
                     else if (action === 'delete') {
                         const ok = await ConfirmDialog.open(`Delete "${repoName}"?`, { confirmText: 'Delete', danger: true });
                         if (ok) await handleDeleteConfirm(repo);
@@ -1025,12 +1075,6 @@
                 }
             });
 
-            // Keep list up to date automatically without manual refresh button.
-            setInterval(async () => {
-                try {
-                    await refreshDataAndView(false);
-                } catch {}
-            }, 120000);
         });
     </script>
     </div>

@@ -1,6 +1,3 @@
-base_directory: NEW_PROJECTS
-
-# Timeout settings (in seconds)
 timeouts:
   refresh: 120
   create_project: 120
@@ -8,3 +5,15 @@ timeouts:
   delete_per_repo: 60
   rename: 60
   git_remote: 5
+  git_push: 120
+
+create_project_repo_url: "https://github.com/israice/Create-Project-Folder.git"
+
+cache:
+  git_state_ttl_sec: 10
+
+python:
+  disable_bytecode: true
+
+ui:
+  default_push_message: "v0.0.2 - new table based dashboard"

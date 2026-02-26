@@ -47,7 +47,33 @@ Create `.env` file in the project root:
 GITHUB_USERNAME=your-github-username
 GITHUB_TOKEN=your-personal-access-token
 PORT=5999
+LOG_LEVEL=INFO
 ```
+
+### 2.1 Configure functional settings
+
+All function-level runtime settings are defined in `settings.yaml` (single source of truth):
+
+```yaml
+timeouts:
+  refresh: 120
+  create_project: 120
+  install_per_repo: 300
+  delete_per_repo: 60
+  rename: 60
+  git_remote: 5
+  git_push: 120
+
+create_project_repo_url: "https://github.com/israice/Create-Project-Folder.git"
+cache:
+  git_state_ttl_sec: 10
+python:
+  disable_bytecode: true
+ui:
+  default_push_message: "v0.0.2 - new table based dashboard"
+```
+
+`settings.yaml` is required at startup. Missing keys will stop the app with a clear error.
 
 ### 3. Get GitHub Token
 
@@ -67,7 +93,7 @@ python run.py
 Or directly with uvicorn:
 
 ```bash
-uvicorn BACKEND.api.main:app --reload --port 5999
+uvicorn main:app --port 5999
 ```
 
 Open in browser: **http://127.0.0.1:5999**
@@ -94,6 +120,7 @@ This creates/updates `BACKEND/get_all_github_projects.yaml` with your repos.
 | POST | `/api/delete` | Delete local folders |
 | POST | `/api/rename` | Rename local project |
 | POST | `/api/rename-github` | Rename GitHub repository |
+| POST | `/api/push` | Run git add/commit/push for a local project |
 | POST | `/api/open-folder` | Open folder in file explorer |
 | GET | `/` | Serve frontend (index.html) |
 
@@ -149,12 +176,12 @@ uvicorn main:app --port 5999
 
 ## Development
 
-### Hot Reload
+### Backend Reload
 
-For development with auto-reload:
+Backend auto-restart on Python file changes:
 
 ```bash
-uvicorn BACKEND.api.main:app --reload --port 5999
+uvicorn main:app --reload --port 5999
 ```
 
 ### API Documentation
