@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
 GitHub Projects Manager - Simplified Single-File Version
-Run with: python main.py
+Run with: python run.py
 """
 
 import json
-import importlib.util
 import mimetypes
 import os
 import re
@@ -55,7 +54,7 @@ warnings.filterwarnings(
 )
 
 # Configuration
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "FRONTEND"
 BACKEND_DIR = BASE_DIR / "BACKEND"
 MY_REPOS_DIR = BASE_DIR / "MY_REPOS"
@@ -556,12 +555,6 @@ async def index():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
 
 
-@app.get("/api/dev-reload-token")
-async def dev_reload_token_compat():
-    # Compatibility endpoint for stale browser tabs that still poll this path.
-    return {"enabled": False}
-
-
 @app.get("/favicon.ico")
 async def favicon():
     return FileResponse(str(FRONTEND_DIR / "favicon.svg"), media_type="image/svg+xml")
@@ -1020,22 +1013,3 @@ async def push_repo(payload: PushPayload, request: Request):
     except Exception as e:
         raise HTTPException(500, str(e))
 
-
-if __name__ == "__main__":
-    import uvicorn
-    hot_reload = str(os.getenv("HOT_RELOAD", "1")).strip().lower() in ("1", "true", "yes", "on")
-    if hot_reload and importlib.util.find_spec("watchfiles") is None:
-        raise RuntimeError(
-            "HOT_RELOAD=1 requires 'watchfiles'. Install dependencies and retry: python -m pip install -r requirements.txt"
-        )
-    reload_dirs = [str(BACKEND_DIR), str(FRONTEND_DIR)]
-    reload_includes = ["main.py", "run.py", "BACKEND/*", "FRONTEND/*"]
-    print(f"GitHub Projects Manager on http://{HOST}:{PORT}")
-    uvicorn.run(
-        "main:app",
-        host=HOST,
-        port=PORT,
-        reload=hot_reload,
-        reload_dirs=reload_dirs if hot_reload else None,
-        reload_includes=reload_includes if hot_reload else None,
-    )

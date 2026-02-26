@@ -1,0 +1,172 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+        *:hover { text-decoration: none !important; }
+        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; }
+        #boot-loader {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1e1e1e;
+            color: #4CAF50;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            z-index: 2000;
+        }
+        #app-root { visibility: hidden; }
+        body.app-ready #app-root { visibility: visible; }
+        body.app-ready #boot-loader { display: none; }
+        body.app-error #boot-loader { color: #ff6b6b; }
+        
+        /* Header */
+        .header-wrapper { display: flex; position: sticky; top: 0; z-index: 100; background: #1e1e1e; }
+        .navbar { flex: 1; display: flex; flex-direction: column; background: #2d2d2d; }
+        .nav-row { display: flex; gap: 10px; padding: 10px 20px; justify-content: center; }
+        .nav-row a { color: #e0e0e0; text-decoration: none; padding: 8px 16px; background: #3d3d3d; border-radius: 4px; }
+        .nav-row a:hover { background: #4d4d4d; }
+        .welcome-row { padding: 0 20px 10px; display: flex; justify-content: center; }
+        .welcome-text { color: #0f0; font-weight: 700; font-family: 'Courier New', monospace; cursor: pointer; }
+        
+        /* Avatar */
+        .avatar-container { position: relative; width: 42px; height: 42px; flex: 0 0 42px; order: -1; }
+        .avatar-img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid #4CAF50; }
+        .avatar-placeholder { width: 42px; height: 42px; border-radius: 50%; border: 2px solid #4CAF50; 
+                               display: flex; align-items: center; justify-content: center; font-size: 23px; }
+        
+        /* Table */
+        .table-container { padding: 0 20px 20px; overflow-x: auto; }
+        .search-row { padding: 0 20px 0; display: flex; align-items: center; gap: 12px; width: 100%; }
+        .user-inline { color: #e0e0e0; white-space: nowrap; font-weight: 600; }
+        .table-search {
+            flex: 1 1 auto;
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #4d4d4d;
+            border-radius: 6px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            outline: none;
+        }
+        .table-search:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.25);
+        }
+        table { border-collapse: collapse; width: 100%; min-width: 800px; table-layout: fixed; }
+        th, td { border: 1px solid #444; padding: 10px; text-align: left; vertical-align: middle; }
+        th { background: #2e7d32; color: #fff; text-align: center; cursor: pointer; user-select: none; }
+        th:hover { background: #388e3c; }
+        th.no-sort { cursor: default; }
+        th.no-sort:hover { background: #2e7d32; }
+        .rownum-cell { text-align: center; width: 56px; color: #bdbdbd; }
+        .rownum-cell:hover { cursor: default; }
+        tr { background: #1e1e1e; }
+        .installed-row { background: #1a3a1a; }
+        .new-project-row { background: #3a2a1a; }
+        
+        /* Cells */
+        .logo-cell { position: relative; text-align: center; width: 60px; cursor: pointer; }
+        .logo-cell.active { background: #2a4a2a; }
+        .logo-cell.has-unpushed::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #b455ff;
+            box-shadow: 0 0 6px rgba(180, 85, 255, 0.7);
+        }
+        .logo-icon { font-size: 32px; }
+        .name-cell { cursor: pointer; color: #4CAF50; font-weight: 600; overflow-wrap: anywhere; word-break: break-word; }
+        .name-cell:hover { text-decoration: underline; }
+        .name-cell.active { background: #2a4a2a; }
+        .description-cell { cursor: pointer; overflow-wrap: anywhere; word-break: break-word; }
+        .description-cell.active { background: #2a4a2a; }
+        .url-cell { text-align: center; width: 60px; }
+        .url-link { text-decoration: none; font-size: 24px; }
+        .started-cell { text-align: center; }
+        .col-rownum { width: 56px; }
+        .col-logo { width: 60px; }
+        .col-name { width: 240px; }
+        .col-url { width: 60px; }
+        .col-started { width: 110px; }
+        .date-badge {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 88px;
+            background: #3d3d3d;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.2;
+            white-space: nowrap;
+            text-align: center;
+        }
+        
+        /* Action Row */
+        .action-row { display: none; }
+        .action-row.show { display: table-row; background: #2a2a2a; }
+        .action-cell { padding: 10px; text-align: center; }
+        .action-btn { display: inline-flex; align-items: center; gap: 6px; margin: 0 8px; padding: 8px 16px;
+                      background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .action-btn:hover { background: #45a049; }
+        .action-visibility { margin: 0 8px; padding: 8px 10px; border: 1px solid #4d4d4d; border-radius: 4px; background: #2a2a2a; color: #e0e0e0; }
+        .screenshots-panel { margin-top: 12px; text-align: center; }
+        .screenshots-grid { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .screenshot-item { width: 160px; text-decoration: none; color: #e0e0e0; }
+        .screenshot-thumb { width: 160px; height: 100px; object-fit: cover; border: 1px solid #4d4d4d; border-radius: 4px; background: #111; display: block; }
+        .screenshot-name { margin-top: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .screenshots-empty { color: #9e9e9e; font-size: 12px; }
+        .action-btn[data-action="delete"] { background: #dc3545; }
+        .action-btn[data-action="delete"]:hover { background: #c82333; }
+        .action-btn[data-action="delete-github"] { background: #b71c1c; }
+        .action-btn[data-action="delete-github"]:hover { background: #9a1818; }
+        .rename-input { width: 90%; padding: 6px; background: #404040; color: #e0e0e0; 
+                        border: 1px solid #4CAF50; border-radius: 4px; font-size: inherit; }
+
+        /* Confirm Modal */
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            pointer-events: auto;
+        }
+        .confirm-overlay[hidden] { display: none !important; }
+        .confirm-modal {
+            width: min(520px, calc(100vw - 32px));
+            background: #2d2d2d;
+            border: 1px solid #4d4d4d;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+            pointer-events: auto;
+        }
+        .confirm-title { font-weight: 700; margin-bottom: 10px; color: #e0e0e0; }
+        .confirm-message { color: #d0d0d0; margin-bottom: 14px; overflow-wrap: anywhere; }
+        .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .confirm-btn {
+            border: 1px solid #4d4d4d;
+            background: #3a3a3a;
+            color: #e0e0e0;
+            border-radius: 6px;
+            padding: 8px 14px;
+            cursor: pointer;
+        }
+        .confirm-btn:hover { background: #464646; }
+        .confirm-btn.confirm-danger {
+            border-color: #b71c1c;
+            background: #b71c1c;
+            color: #fff;
+        }
+        .confirm-btn.confirm-danger:hover { background: #9a1818; }
+        
+        /* Loading */
+        .loading { opacity: 0.6; pointer-events: none; }
+

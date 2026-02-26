@@ -59,3 +59,4 @@ v0.0.23 - testing new logic in version savings
 v0.0.24 - updated action buttons; updated backend logic; added Push button in project row panel
 v0.0.25 - fixed auto version message generation
 v0.0.26 - added API request handling
+v0.0.27 - added configuration loading

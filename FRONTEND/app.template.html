@@ -1,0 +1,65 @@
+<div id="boot-loader">Loading projects...</div>
+<div id="confirm-overlay" class="confirm-overlay" hidden>
+  <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="confirm-title" id="confirm-title">Confirm Action</div>
+    <div class="confirm-message" id="confirm-message"></div>
+    <div class="confirm-actions">
+      <button class="confirm-btn" id="confirm-cancel" type="button">Cancel</button>
+      <button class="confirm-btn confirm-danger" id="confirm-ok" type="button">Confirm</button>
+    </div>
+  </div>
+</div>
+<div id="app-root">
+  <div class="header-wrapper">
+    <div class="navbar">
+      <div class="nav-row">
+        <a href="#" id="nav-repos">📦 Repos: 0</a>
+        <a href="#" id="nav-installed">📁 Downloaded: 0</a>
+        <a href="#" id="nav-local-only">🗂️ New Projects: 0</a>
+        <a href="#" id="nav-last-url">🚀 Next: -</a>
+        <a href="#" id="btn-create-new">➕ Create New</a>
+      </div>
+      <div class="search-row">
+        <div class="avatar-container" id="avatar-container">
+          <div class="avatar-placeholder" id="avatar-placeholder">📦</div>
+          <img class="avatar-img" id="avatar-img" style="display:none">
+        </div>
+        <span class="user-inline" id="nav-username">-</span>
+        <input
+          id="table-search"
+          class="table-search"
+          type="text"
+          placeholder="Search by Name, Description, URL, date..."
+          autocomplete="off"
+        >
+      </div>
+      <div class="welcome-row">
+        <span class="welcome-text" id="welcome-text"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table id="repos-table">
+      <colgroup>
+        <col class="col-rownum">
+        <col class="col-logo">
+        <col class="col-name">
+        <col>
+        <col class="col-url">
+        <col class="col-started">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="no-sort">#</th>
+          <th data-sort="type">Logo</th>
+          <th data-sort="name">Name</th>
+          <th data-sort="description">Description</th>
+          <th data-sort="url">URL</th>
+          <th data-sort="created_at">Started</th>
+        </tr>
+      </thead>
+      <tbody id="repos-tbody"></tbody>
+    </table>
+  </div>
+</div>

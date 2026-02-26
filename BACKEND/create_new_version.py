@@ -60,7 +60,7 @@ def scope_from_path(path: str) -> str:
         return "backend"
     if p.startswith("TEST") or "/TEST" in p:
         return "tests"
-    if p in ("main.py", "run.py"):
+    if p in ("run.py", "BACKEND/main.py"):
         return "server"
     if p.startswith(".github/"):
         return "ci"

@@ -15,7 +15,7 @@ Modern web application for managing GitHub repositories and local project folder
 └─────────────────────────────────────┘
                 ↕ REST API (JSON)
 ┌─────────────────────────────────────┐
-│  main.py (FastAPI)                  │
+│  BACKEND/main.py (FastAPI)          │
 └─────────────────────────────────────┘
 ```
 
@@ -93,7 +93,7 @@ python run.py
 Or directly with uvicorn:
 
 ```bash
-uvicorn main:app --port 5999
+uvicorn BACKEND.main:app --port 5999
 ```
 
 Open in browser: **http://127.0.0.1:5999**
@@ -128,11 +128,11 @@ This creates/updates `BACKEND/get_all_github_projects.yaml` with your repos.
 
 ```
 projects-factory/
-├── main.py                   # FastAPI backend (single file)
 ├── run.py                    # Entry point
 ├── FRONTEND/
 │   └── index.html            # All-in-one frontend (HTML+CSS+JS)
 ├── BACKEND/
+│   ├── main.py               # FastAPI backend (single file)
 │   ├── get_all_github_projects.py
 │   ├── get_all_github_projects.yaml
 │   ├── install_existing_repo.py
@@ -150,7 +150,7 @@ projects-factory/
 
 ### What Changed from v2.0
 
-1. **Backend**: `BACKEND/api/main.py` (600 lines) → `main.py` (286 lines)
+1. **Backend**: `BACKEND/api/main.py` (600 lines) → `BACKEND/main.py` (single file)
 2. **Frontend**: 4 JS files + CSS → Single `FRONTEND/index.html`
 3. **No SSR**: Removed Jinja2 templating, pure SPA
 4. **75% fewer files**: Old architecture backed up to `OLD_TEMP/`
@@ -169,9 +169,7 @@ rmdir /S OLD_TEMP
 ```bash
 python run.py
 # or
-python main.py
-# or
-uvicorn main:app --port 5999
+uvicorn BACKEND.main:app --port 5999
 ```
 
 ## Development
@@ -181,10 +179,10 @@ uvicorn main:app --port 5999
 Backend auto-restart on Python file changes:
 
 ```bash
-uvicorn main:app --reload --port 5999
+uvicorn BACKEND.main:app --reload --port 5999
 ```
 
-When running `python run.py` or `python main.py`, hot reload is now enabled by default.
+When running `python run.py`, backend hot reload is enabled by default.
 Disable it with:
 
 ```env
@@ -213,6 +211,9 @@ npm install
 If dependencies are missing, `python run.py` will auto-run `npm install` in `FRONTEND/`.
 
 `vite.config.mjs` proxies `/api` and `/static` to FastAPI, so existing frontend API calls keep working.
+When launched via `python run.py`, proxy target is passed automatically via env (`PF_BACKEND_HOST`, `PF_BACKEND_PORT`).
+UI markup for hot updates is in `FRONTEND/app.template.html` (not in `index.html`).
+Table/action-row markup templates are in `FRONTEND/ui.templates.js` and hot-reload without full page refresh.
 
 Disable frontend dev server if needed:
 

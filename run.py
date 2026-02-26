@@ -6,7 +6,7 @@ Run with:
     python run.py
 
 Or directly with uvicorn:
-    uvicorn main:app --reload --port 5999
+    uvicorn BACKEND.main:app --reload --port 5999
 """
 
 import os
@@ -14,7 +14,10 @@ import sys
 import importlib.util
 import shutil
 import signal
+import socket
 import subprocess
+import threading
+import time
 from pathlib import Path
 
 if os.name == "nt":
@@ -187,15 +190,45 @@ def start_vite(frontend_hmr: bool) -> subprocess.Popen | None:
     if not vite_cli.exists():
         raise RuntimeError("Vite CLI not found after npm install. Reinstall frontend dependencies.")
     creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
+    vite_env = os.environ.copy()
+    vite_env["PF_BACKEND_HOST"] = HOST
+    vite_env["PF_BACKEND_PORT"] = str(PORT)
     proc = subprocess.Popen(
         [node_cmd, str(vite_cli), "--host", "127.0.0.1", "--port", "5173", "--strictPort"],
         cwd=str(FRONTEND_DIR),
-        env=os.environ.copy(),
+        env=vite_env,
         creationflags=creationflags,
     )
     assign_process_to_windows_job(proc, WINDOWS_JOB)
     print("Frontend HMR: http://127.0.0.1:5173")
     return proc
+
+
+def wait_for_tcp_listener(host: str, port: int, timeout_sec: float = 30.0) -> bool:
+    deadline = time.time() + timeout_sec
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.35):
+                return True
+        except OSError:
+            time.sleep(0.25)
+    return False
+
+
+def start_vite_when_backend_ready(frontend_hmr: bool, holder: dict) -> threading.Thread | None:
+    if not frontend_hmr:
+        return None
+
+    def worker() -> None:
+        if holder.get("stop"):
+            return
+        if wait_for_tcp_listener(HOST, PORT, timeout_sec=30.0):
+            if not holder.get("stop"):
+                holder["proc"] = start_vite(True)
+
+    t = threading.Thread(target=worker, daemon=True, name="vite-launcher")
+    t.start()
+    return t
 
 
 def stop_process(proc: subprocess.Popen | None) -> None:
@@ -225,12 +258,13 @@ if __name__ == "__main__":
     ensure_frontend_requirements(frontend_hmr)
     ensure_frontend_deps_installed(frontend_hmr)
 
-    vite_proc = start_vite(frontend_hmr)
-    reload_dirs = [str(BASE_DIR / "BACKEND"), str(BASE_DIR / "FRONTEND")]
-    reload_includes = ["main.py", "run.py", "BACKEND/*", "FRONTEND/*"]
+    vite_holder = {"proc": None, "stop": False}
+    vite_thread = start_vite_when_backend_ready(frontend_hmr, vite_holder)
+    reload_dirs = [str(BASE_DIR), str(BASE_DIR / "BACKEND")]
+    reload_includes = ["run.py", "BACKEND/*.py"]
     try:
         uvicorn.run(
-            "main:app",
+            "BACKEND.main:app",
             host=HOST,
             port=PORT,
             reload=hot_reload,
@@ -238,5 +272,8 @@ if __name__ == "__main__":
             reload_includes=reload_includes if hot_reload else None,
         )
     finally:
-        stop_process(vite_proc)
+        vite_holder["stop"] = True
+        if vite_thread and vite_thread.is_alive():
+            vite_thread.join(timeout=1.0)
+        stop_process(vite_holder.get("proc"))
         close_windows_job(WINDOWS_JOB)
