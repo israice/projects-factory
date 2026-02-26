@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-GitHub Projects Manager - FastAPI Server
+GitHub Projects Manager - Simplified Version
 
 Run with:
     python run.py
 
 Or directly with uvicorn:
-    uvicorn BACKEND.api.main:app --reload --port 5999
+    uvicorn main:app --reload --port 5999
 """
 
 import os
@@ -18,22 +18,13 @@ BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
 from dotenv import load_dotenv
-
-# Load environment variables
 load_dotenv()
 
 PORT = int(os.getenv("PORT", "5999"))
+HOST = os.getenv("HOST", "127.0.0.1")
 
 if __name__ == "__main__":
     import uvicorn
-    
-    print(f"🚀 Starting GitHub Projects Manager on http://127.0.0.1:{PORT}")
-    print(f"📁 Project root: {BASE_DIR}")
-    
-    uvicorn.run(
-        "BACKEND.api.main:app",
-        host="0.0.0.0",
-        port=PORT,
-        reload=False,
-        log_level="info",
-    )
+    from main import app
+
+    uvicorn.run(app, host=HOST, port=PORT, reload=False)

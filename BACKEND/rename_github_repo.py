@@ -51,7 +51,7 @@ def load_config(argv: list[str]) -> tuple[str, str, str, str]:
     load_dotenv()
 
     token = os.getenv("GITHUB_TOKEN", "")
-    owner = os.getenv("GITHUB_OWNER", DEFAULT_OWNER)
+    owner = os.getenv("GITHUB_OWNER") or os.getenv("GITHUB_USERNAME") or DEFAULT_OWNER
 
     if len(argv) >= 3:
         old_name = argv[1]

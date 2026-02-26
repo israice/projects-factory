@@ -1,26 +1,22 @@
-# GitHub Projects Manager v2.0
+# GitHub Projects Manager v3.0 - Simplified
 
 Modern web application for managing GitHub repositories and local project folders.
 
 ## Architecture
 
-This is a **Single Page Application (SPA)** with clear separation of concerns:
+**Ultra-simplified Single Page Application (SPA):**
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  FRONTEND (SPA - Vanilla JS)                            │
-│  ├── index.html          # Main HTML template           │
-│  ├── styles.css          # All styles                   │
-│  ├── api.js              # API client module            │
-│  ├── state.js            # State management             │
-│  ├── ui.js               # UI rendering                 │
-│  └── app.js              # Main application logic       │
-└─────────────────────────────────────────────────────────┘
-                          ↕ REST API (JSON)
-┌─────────────────────────────────────────────────────────┐
-│  BACKEND (FastAPI)                                      │
-│  └── api/main.py         # API endpoints + static serve │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│  FRONTEND/index.html                │
+│  ├── HTML (structure)               │
+│  ├── CSS (inline styles)            │
+│  └── JavaScript (inline, all logic) │
+└─────────────────────────────────────┘
+                ↕ REST API (JSON)
+┌─────────────────────────────────────┐
+│  main.py (FastAPI)                  │
+└─────────────────────────────────────┘
 ```
 
 ## Features
@@ -99,56 +95,57 @@ This creates/updates `BACKEND/get_all_github_projects.yaml` with your repos.
 | POST | `/api/rename` | Rename local project |
 | POST | `/api/rename-github` | Rename GitHub repository |
 | POST | `/api/open-folder` | Open folder in file explorer |
+| GET | `/` | Serve frontend (index.html) |
 
 ## Project Structure
 
 ```
 projects-factory/
+├── main.py                   # FastAPI backend (single file)
+├── run.py                    # Entry point
+├── FRONTEND/
+│   └── index.html            # All-in-one frontend (HTML+CSS+JS)
 ├── BACKEND/
-│   ├── api/
-│   │   └── main.py           # FastAPI application
 │   ├── get_all_github_projects.py
 │   ├── get_all_github_projects.yaml
 │   ├── install_existing_repo.py
 │   ├── delete_local_folder.py
 │   └── rename_github_repo.py
-├── FRONTEND/
-│   ├── index.html            # SPA entry point
-│   ├── styles.css            # Application styles
-│   ├── api.js                # API client
-│   ├── state.js              # State management
-│   ├── ui.js                 # UI rendering
-│   └── app.js                # Main logic
 ├── MY_REPOS/                 # Installed repositories
 ├── NEW_PROJECTS/             # Local project folders
-├── run.py                    # Server entry point
+├── OLD_TEMP/                 # Backup of old architecture (can delete)
 ├── requirements.txt          # Python dependencies
 ├── settings.yaml             # Configuration
 └── .env                      # Environment variables
 ```
 
-## Migration from v1.x
+## v3.0 Simplification
 
-### Key Changes
+### What Changed from v2.0
 
-1. **Backend**: Flask → FastAPI
-2. **Frontend**: Server-rendered templates → Client-side SPA
-3. **API**: Mixed redirects/AJAX → Consistent REST API
-4. **Structure**: Monolithic `run.py` → Modular architecture
+1. **Backend**: `BACKEND/api/main.py` (600 lines) → `main.py` (286 lines)
+2. **Frontend**: 4 JS files + CSS → Single `FRONTEND/index.html`
+3. **No SSR**: Removed Jinja2 templating, pure SPA
+4. **75% fewer files**: Old architecture backed up to `OLD_TEMP/`
 
-### Breaking Changes
+### Migration from v2.0
 
-- None for end users - UI looks and behaves the same
-- API endpoints changed from `/install` to `/api/install`, etc.
-- No more server-side template rendering
+The old architecture is backed up in `OLD_TEMP/`. You can safely delete it:
 
-### Upgrade Steps
+```bash
+# After confirming v3.0 works:
+rmdir /S OLD_TEMP
+```
 
-1. Update dependencies: `pip install -r requirements.txt`
-2. Replace `run.py` with new version
-3. Replace `FRONTEND/` files with new SPA version
-4. Add `BACKEND/api/main.py`
-5. Start server: `python run.py`
+### Running v3.0
+
+```bash
+python run.py
+# or
+python main.py
+# or
+uvicorn main:app --port 5999
+```
 
 ## Development
 

@@ -86,7 +86,7 @@ repositories:
 - name: israice
   url: https://github.com/israice/israice
   private: false
-  description: ''
+  description: about me
   created_at: '2025-10-18T02:00:42Z'
 - name: Job-Finder-Tool
   url: https://github.com/israice/Job-Finder-Tool

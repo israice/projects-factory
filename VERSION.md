@@ -27,7 +27,7 @@ python run.py
 
 # UPDATE
 git add .
-git commit -m "v0.0.12 - code to fast api"
+git commit -m "v0.0.13 - added search"
 git push
 python run.py
 
@@ -44,3 +44,4 @@ v0.0.9 - added delete yellow project button
 v0.0.10 - added rename local project button
 v0.0.11 - added avatar based menu
 v0.0.12 - code to fast api
+v0.0.13 - added search

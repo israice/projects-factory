@@ -1,0 +1,571 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - 'link "👨 User: israice" [ref=e7] [cursor=pointer]':
+          - /url: "#"
+        - 'link "📦 Repos: 40" [ref=e8] [cursor=pointer]':
+          - /url: "#"
+        - 'link "📁 Installed: 17" [ref=e9] [cursor=pointer]':
+          - /url: "#"
+      - generic [ref=e10]: Добро пожаловать, Мастер
+    - img [ref=e13] [cursor=pointer]
+  - table [ref=e15]:
+    - rowgroup [ref=e16]:
+      - row "Logo Projets Description URL Started" [ref=e17]:
+        - columnheader "Logo" [ref=e18] [cursor=pointer]
+        - columnheader "Projets" [ref=e19] [cursor=pointer]
+        - columnheader "Description" [ref=e20] [cursor=pointer]
+        - columnheader "URL" [ref=e21] [cursor=pointer]
+        - columnheader "Started" [ref=e22] [cursor=pointer]
+    - rowgroup [ref=e23]:
+      - row "📦 israice 🌍 2025-10-18 02:00:42" [ref=e24]:
+        - cell "📦" [ref=e25]
+        - cell "israice" [ref=e26] [cursor=pointer]
+        - cell [ref=e27]
+        - cell "🌍" [ref=e28]:
+          - link "🌍" [ref=e29] [cursor=pointer]:
+            - /url: https://github.com/israice/israice
+        - cell "2025-10-18 02:00:42" [ref=e30]:
+          - generic [ref=e31]:
+            - text: 2025-10-18
+            - text: 02:00:42
+      - row "📦 ADD-DOMAIN-TO-WINDOWS 🌍 2025-05-14 10:45:14" [ref=e32]:
+        - cell "📦" [ref=e33]
+        - cell "ADD-DOMAIN-TO-WINDOWS" [ref=e34] [cursor=pointer]
+        - cell [ref=e35]
+        - cell "🌍" [ref=e36]:
+          - link "🌍" [ref=e37] [cursor=pointer]:
+            - /url: https://github.com/israice/ADD-DOMAIN-TO-WINDOWS
+        - cell "2025-05-14 10:45:14" [ref=e38]:
+          - generic [ref=e39]:
+            - text: 2025-05-14
+            - text: 10:45:14
+      - row "📦 Android-WebView-Auto-Builder Turn any URL into an APK in seconds. Zero Setup. No Android Studio. No Java installation required. No headaches. Just run the script, and get your APK. 🌍 2025-12-11 13:08:08" [ref=e40]:
+        - cell "📦" [ref=e41]
+        - cell "Android-WebView-Auto-Builder" [ref=e42] [cursor=pointer]
+        - cell "Turn any URL into an APK in seconds. Zero Setup. No Android Studio. No Java installation required. No headaches. Just run the script, and get your APK." [ref=e43]
+        - cell "🌍" [ref=e44]:
+          - link "🌍" [ref=e45] [cursor=pointer]:
+            - /url: https://github.com/israice/Android-WebView-Auto-Builder
+        - cell "2025-12-11 13:08:08" [ref=e46]:
+          - generic [ref=e47]:
+            - text: 2025-12-11
+            - text: 13:08:08
+      - row "📦 Autotrade-Based-Line 🌍 2025-06-28 23:14:18" [ref=e48]:
+        - cell "📦" [ref=e49]
+        - cell "Autotrade-Based-Line" [ref=e50] [cursor=pointer]
+        - cell [ref=e51]
+        - cell "🌍" [ref=e52]:
+          - link "🌍" [ref=e53] [cursor=pointer]:
+            - /url: https://github.com/israice/Autotrade-Based-Line
+        - cell "2025-06-28 23:14:18" [ref=e54]:
+          - generic [ref=e55]:
+            - text: 2025-06-28
+            - text: 23:14:18
+      - row "📦 BUY-ON-SECOND-CANDLE 🌍 2025-09-03 14:10:20" [ref=e56]:
+        - cell "📦" [ref=e57]
+        - cell "BUY-ON-SECOND-CANDLE" [ref=e58] [cursor=pointer]
+        - cell [ref=e59]
+        - cell "🌍" [ref=e60]:
+          - link "🌍" [ref=e61] [cursor=pointer]:
+            - /url: https://github.com/israice/BUY-ON-SECOND-CANDLE
+        - cell "2025-09-03 14:10:20" [ref=e62]:
+          - generic [ref=e63]:
+            - text: 2025-09-03
+            - text: 14:10:20
+      - row "📦 card-game-based-n8n2 🌍 2025-04-28 19:38:56" [ref=e64]:
+        - cell "📦" [ref=e65]
+        - cell "card-game-based-n8n2" [ref=e66] [cursor=pointer]
+        - cell [ref=e67]
+        - cell "🌍" [ref=e68]:
+          - link "🌍" [ref=e69] [cursor=pointer]:
+            - /url: https://github.com/israice/card-game-based-n8n2
+        - cell "2025-04-28 19:38:56" [ref=e70]:
+          - generic [ref=e71]:
+            - text: 2025-04-28
+            - text: 19:38:56
+      - row "📦 copy-tab-url-to-airtable 🌍 2025-05-08 01:34:03" [ref=e72]:
+        - cell "📦" [ref=e73]
+        - cell "copy-tab-url-to-airtable" [ref=e74] [cursor=pointer]
+        - cell [ref=e75]
+        - cell "🌍" [ref=e76]:
+          - link "🌍" [ref=e77] [cursor=pointer]:
+            - /url: https://github.com/israice/copy-tab-url-to-airtable
+        - cell "2025-05-08 01:34:03" [ref=e78]:
+          - generic [ref=e79]:
+            - text: 2025-05-08
+            - text: 01:34:03
+      - row "📦 CrazyWalk-Game CrazyWalk is a geolocation-based exploration and territory capture game. Navigate real-world streets, collect items, and complete polygons to expand your map. 🌍 2025-12-11 06:00:41" [ref=e80]:
+        - cell "📦" [ref=e81]
+        - cell "CrazyWalk-Game" [ref=e82] [cursor=pointer]
+        - cell "CrazyWalk is a geolocation-based exploration and territory capture game. Navigate real-world streets, collect items, and complete polygons to expand your map." [ref=e83]
+        - cell "🌍" [ref=e84]:
+          - link "🌍" [ref=e85] [cursor=pointer]:
+            - /url: https://github.com/israice/CrazyWalk-Game
+        - cell "2025-12-11 06:00:41" [ref=e86]:
+          - generic [ref=e87]:
+            - text: 2025-12-11
+            - text: 06:00:41
+      - row "📦 Create-Project-Folder A minimalistic Python tool to generate a structured project folder with pre-filled templates for backend, frontend, data, and configuration files. Just run and code — your workspace is ready in seconds! 🌍 2025-05-08 02:16:52" [ref=e88]:
+        - cell "📦" [ref=e89]
+        - cell "Create-Project-Folder" [ref=e90] [cursor=pointer]
+        - cell "A minimalistic Python tool to generate a structured project folder with pre-filled templates for backend, frontend, data, and configuration files. Just run and code — your workspace is ready in seconds!" [ref=e91]
+        - cell "🌍" [ref=e92]:
+          - link "🌍" [ref=e93] [cursor=pointer]:
+            - /url: https://github.com/israice/Create-Project-Folder
+        - cell "2025-05-08 02:16:52" [ref=e94]:
+          - generic [ref=e95]:
+            - text: 2025-05-08
+            - text: 02:16:52
+      - row "📦 flask-cards 🌍 2025-05-03 03:49:45" [ref=e96]:
+        - cell "📦" [ref=e97]
+        - cell "flask-cards" [ref=e98] [cursor=pointer]
+        - cell [ref=e99]
+        - cell "🌍" [ref=e100]:
+          - link "🌍" [ref=e101] [cursor=pointer]:
+            - /url: https://github.com/israice/flask-cards
+        - cell "2025-05-03 03:49:45" [ref=e102]:
+          - generic [ref=e103]:
+            - text: 2025-05-03
+            - text: 03:49:45
+      - row "📦 flask-with-google-auth 🌍 2025-05-03 01:05:15" [ref=e104]:
+        - cell "📦" [ref=e105]
+        - cell "flask-with-google-auth" [ref=e106] [cursor=pointer]
+        - cell [ref=e107]
+        - cell "🌍" [ref=e108]:
+          - link "🌍" [ref=e109] [cursor=pointer]:
+            - /url: https://github.com/israice/flask-with-google-auth
+        - cell "2025-05-03 01:05:15" [ref=e110]:
+          - generic [ref=e111]:
+            - text: 2025-05-03
+            - text: 01:05:15
+      - row "📦 gemma-on-local-network 🌍 2025-10-09 20:05:16" [ref=e112]:
+        - cell "📦" [ref=e113]
+        - cell "gemma-on-local-network" [ref=e114] [cursor=pointer]
+        - cell [ref=e115]
+        - cell "🌍" [ref=e116]:
+          - link "🌍" [ref=e117] [cursor=pointer]:
+            - /url: https://github.com/israice/gemma-on-local-network
+        - cell "2025-10-09 20:05:16" [ref=e118]:
+          - generic [ref=e119]:
+            - text: 2025-10-09
+            - text: 20:05:16
+      - row "📦 get-special-url-using-chrome-extension 🌍 2025-05-10 13:39:15" [ref=e120]:
+        - cell "📦" [ref=e121]
+        - cell "get-special-url-using-chrome-extension" [ref=e122] [cursor=pointer]
+        - cell [ref=e123]
+        - cell "🌍" [ref=e124]:
+          - link "🌍" [ref=e125] [cursor=pointer]:
+            - /url: https://github.com/israice/get-special-url-using-chrome-extension
+        - cell "2025-05-10 13:39:15" [ref=e126]:
+          - generic [ref=e127]:
+            - text: 2025-05-10
+            - text: 13:39:15
+      - row "📦 Github-Badge-Quest2 Comprehensive, fan-made guide that teaches you how to unlock all the special badges, called \"Achievements,\" on your GitHub profile. The site provides step-by-step tutorials for earning specific achievements like \"Quickdraw\" and \"Pull Shark,\" and includes a full list of available badges. 🌍 2025-10-18 05:15:38" [ref=e128]:
+        - cell "📦" [ref=e129]
+        - cell "Github-Badge-Quest2" [ref=e130] [cursor=pointer]
+        - cell "Comprehensive, fan-made guide that teaches you how to unlock all the special badges, called \"Achievements,\" on your GitHub profile. The site provides step-by-step tutorials for earning specific achievements like \"Quickdraw\" and \"Pull Shark,\" and includes a full list of available badges." [ref=e131]
+        - cell "🌍" [ref=e132]:
+          - link "🌍" [ref=e133] [cursor=pointer]:
+            - /url: https://github.com/israice/Github-Badge-Quest2
+        - cell "2025-10-18 05:15:38" [ref=e134]:
+          - generic [ref=e135]:
+            - text: 2025-10-18
+            - text: 05:15:38
+      - row "📦 HTML-LiveStream-TV-Wall Minimalistic HLS dashboard built with pure HTML, CSS & JS. 🌍 2025-06-24 20:44:51" [ref=e136]:
+        - cell "📦" [ref=e137]
+        - cell "HTML-LiveStream-TV-Wall" [ref=e138] [cursor=pointer]
+        - cell "Minimalistic HLS dashboard built with pure HTML, CSS & JS." [ref=e139]
+        - cell "🌍" [ref=e140]:
+          - link "🌍" [ref=e141] [cursor=pointer]:
+            - /url: https://github.com/israice/HTML-LiveStream-TV-Wall
+        - cell "2025-06-24 20:44:51" [ref=e142]:
+          - generic [ref=e143]:
+            - text: 2025-06-24
+            - text: 20:44:51
+      - row "📦 Inkasio-the-fastest-cash 🌍 2025-05-13 15:21:36" [ref=e144]:
+        - cell "📦" [ref=e145]
+        - cell "Inkasio-the-fastest-cash" [ref=e146] [cursor=pointer]
+        - cell [ref=e147]
+        - cell "🌍" [ref=e148]:
+          - link "🌍" [ref=e149] [cursor=pointer]:
+            - /url: https://github.com/israice/Inkasio-the-fastest-cash
+        - cell "2025-05-13 15:21:36" [ref=e150]:
+          - generic [ref=e151]:
+            - text: 2025-05-13
+            - text: 15:21:36
+      - row "📦 Job-Finder-Tool 🌍 2025-06-25 04:53:50" [ref=e152]:
+        - cell "📦" [ref=e153]
+        - cell "Job-Finder-Tool" [ref=e154] [cursor=pointer]
+        - cell [ref=e155]
+        - cell "🌍" [ref=e156]:
+          - link "🌍" [ref=e157] [cursor=pointer]:
+            - /url: https://github.com/israice/Job-Finder-Tool
+        - cell "2025-06-25 04:53:50" [ref=e158]:
+          - generic [ref=e159]:
+            - text: 2025-06-25
+            - text: 04:53:50
+      - row "📦 js_lessons 🌍 2025-05-26 14:16:29" [ref=e160]:
+        - cell "📦" [ref=e161]
+        - cell "js_lessons" [ref=e162] [cursor=pointer]
+        - cell [ref=e163]
+        - cell "🌍" [ref=e164]:
+          - link "🌍" [ref=e165] [cursor=pointer]:
+            - /url: https://github.com/israice/js_lessons
+        - cell "2025-05-26 14:16:29" [ref=e166]:
+          - generic [ref=e167]:
+            - text: 2025-05-26
+            - text: 14:16:29
+      - row "📦 lingo-boost 🌍 2025-10-14 22:23:34" [ref=e168]:
+        - cell "📦" [ref=e169]
+        - cell "lingo-boost" [ref=e170] [cursor=pointer]
+        - cell [ref=e171]
+        - cell "🌍" [ref=e172]:
+          - link "🌍" [ref=e173] [cursor=pointer]:
+            - /url: https://github.com/israice/lingo-boost
+        - cell "2025-10-14 22:23:34" [ref=e174]:
+          - generic [ref=e175]:
+            - text: 2025-10-14
+            - text: 22:23:34
+      - row "📦 LMSTUDIO-System 🌍 2025-05-06 04:55:01" [ref=e176]:
+        - cell "📦" [ref=e177]
+        - cell "LMSTUDIO-System" [ref=e178] [cursor=pointer]
+        - cell [ref=e179]
+        - cell "🌍" [ref=e180]:
+          - link "🌍" [ref=e181] [cursor=pointer]:
+            - /url: https://github.com/israice/LMSTUDIO-System
+        - cell "2025-05-06 04:55:01" [ref=e182]:
+          - generic [ref=e183]:
+            - text: 2025-05-06
+            - text: 04:55:01
+      - row "📦 Master-Ultimate-Cheatsheet This is a public repository that serves as a collection of cheat sheets and examples for web developers. The project aims to provide ready-to-use code snippets (copy-paste) to speed up development. 🌍 2025-10-17 04:17:50" [ref=e184]:
+        - cell "📦" [ref=e185]
+        - cell "Master-Ultimate-Cheatsheet" [ref=e186] [cursor=pointer]
+        - cell "This is a public repository that serves as a collection of cheat sheets and examples for web developers. The project aims to provide ready-to-use code snippets (copy-paste) to speed up development." [ref=e187]
+        - cell "🌍" [ref=e188]:
+          - link "🌍" [ref=e189] [cursor=pointer]:
+            - /url: https://github.com/israice/Master-Ultimate-Cheatsheet
+        - cell "2025-10-17 04:17:50" [ref=e190]:
+          - generic [ref=e191]:
+            - text: 2025-10-17
+            - text: 04:17:50
+      - row "📦 PieHook 🌍 2026-01-05 23:25:07" [ref=e192]:
+        - cell "📦" [ref=e193]
+        - cell "PieHook" [ref=e194] [cursor=pointer]
+        - cell [ref=e195]
+        - cell "🌍" [ref=e196]:
+          - link "🌍" [ref=e197] [cursor=pointer]:
+            - /url: https://github.com/israice/PieHook
+        - cell "2026-01-05 23:25:07" [ref=e198]:
+          - generic [ref=e199]:
+            - text: 2026-01-05
+            - text: 23:25:07
+      - row "📦 project1234 🌍 2025-04-25 03:23:23" [ref=e200]:
+        - cell "📦" [ref=e201]
+        - cell "project1234" [ref=e202] [cursor=pointer]
+        - cell [ref=e203]
+        - cell "🌍" [ref=e204]:
+          - link "🌍" [ref=e205] [cursor=pointer]:
+            - /url: https://github.com/israice/project1234
+        - cell "2025-04-25 03:23:23" [ref=e206]:
+          - generic [ref=e207]:
+            - text: 2025-04-25
+            - text: 03:23:23
+      - row "📦 projects-factory 🌍 2026-02-25 05:49:37" [ref=e208]:
+        - cell "📦" [ref=e209]
+        - cell "projects-factory" [ref=e210] [cursor=pointer]
+        - cell [ref=e211]
+        - cell "🌍" [ref=e212]:
+          - link "🌍" [ref=e213] [cursor=pointer]:
+            - /url: https://github.com/israice/projects-factory
+        - cell "2026-02-25 05:49:37" [ref=e214]:
+          - generic [ref=e215]:
+            - text: 2026-02-25
+            - text: 05:49:37
+      - row "📦 Python-PancakeSwap-Prediction-Auto-Clicker 🌍 2025-09-14 20:29:15" [ref=e216]:
+        - cell "📦" [ref=e217]
+        - cell "Python-PancakeSwap-Prediction-Auto-Clicker" [ref=e218] [cursor=pointer]
+        - cell [ref=e219]
+        - cell "🌍" [ref=e220]:
+          - link "🌍" [ref=e221] [cursor=pointer]:
+            - /url: https://github.com/israice/Python-PancakeSwap-Prediction-Auto-Clicker
+        - cell "2025-09-14 20:29:15" [ref=e222]:
+          - generic [ref=e223]:
+            - text: 2025-09-14
+            - text: 20:29:15
+      - row "📦 SecurityLayer-Dashboard 🌍 2026-01-25 23:47:52" [ref=e224]:
+        - cell "📦" [ref=e225]
+        - cell "SecurityLayer-Dashboard" [ref=e226] [cursor=pointer]
+        - cell [ref=e227]
+        - cell "🌍" [ref=e228]:
+          - link "🌍" [ref=e229] [cursor=pointer]:
+            - /url: https://github.com/israice/SecurityLayer-Dashboard
+        - cell "2026-01-25 23:47:52" [ref=e230]:
+          - generic [ref=e231]:
+            - text: 2026-01-25
+            - text: 23:47:52
+      - row "📦 server-docker-with-github-update 🌍 2026-02-02 04:55:32" [ref=e232]:
+        - cell "📦" [ref=e233]
+        - cell "server-docker-with-github-update" [ref=e234] [cursor=pointer]
+        - cell [ref=e235]
+        - cell "🌍" [ref=e236]:
+          - link "🌍" [ref=e237] [cursor=pointer]:
+            - /url: https://github.com/israice/server-docker-with-github-update
+        - cell "2026-02-02 04:55:32" [ref=e238]:
+          - generic [ref=e239]:
+            - text: 2026-02-02
+            - text: 04:55:32
+      - row "📦 sharepoint-video-downloader 🌍 2025-05-10 15:05:20" [ref=e240]:
+        - cell "📦" [ref=e241]
+        - cell "sharepoint-video-downloader" [ref=e242] [cursor=pointer]
+        - cell [ref=e243]
+        - cell "🌍" [ref=e244]:
+          - link "🌍" [ref=e245] [cursor=pointer]:
+            - /url: https://github.com/israice/sharepoint-video-downloader
+        - cell "2025-05-10 15:05:20" [ref=e246]:
+          - generic [ref=e247]:
+            - text: 2025-05-10
+            - text: 15:05:20
+      - row "📦 Simple-SPA-Example A simple, lightweight, and reliable Single Page Application (SPA) boilerplate designed to work flawlessly on GitHub Pages. This project demonstrates how to build a modern SPA without complex frameworks, using only vanilla JavaScript, HTML, and CSS. It's a great starting point for personal websites or project documentation 🌍 2025-10-18 00:52:03" [ref=e248]:
+        - cell "📦" [ref=e249]
+        - cell "Simple-SPA-Example" [ref=e250] [cursor=pointer]
+        - cell "A simple, lightweight, and reliable Single Page Application (SPA) boilerplate designed to work flawlessly on GitHub Pages. This project demonstrates how to build a modern SPA without complex frameworks, using only vanilla JavaScript, HTML, and CSS. It's a great starting point for personal websites or project documentation" [ref=e251]
+        - cell "🌍" [ref=e252]:
+          - link "🌍" [ref=e253] [cursor=pointer]:
+            - /url: https://github.com/israice/Simple-SPA-Example
+        - cell "2025-10-18 00:52:03" [ref=e254]:
+          - generic [ref=e255]:
+            - text: 2025-10-18
+            - text: 00:52:03
+      - row "📦 Telegram-IOU-Tracker Ever lose track of who owes you money? Or who you owe? This little bot is your new best friend! 🌍 2025-10-23 14:36:46" [ref=e256]:
+        - cell "📦" [ref=e257]
+        - cell "Telegram-IOU-Tracker" [ref=e258] [cursor=pointer]
+        - cell "Ever lose track of who owes you money? Or who you owe? This little bot is your new best friend!" [ref=e259]
+        - cell "🌍" [ref=e260]:
+          - link "🌍" [ref=e261] [cursor=pointer]:
+            - /url: https://github.com/israice/Telegram-IOU-Tracker
+        - cell "2025-10-23 14:36:46" [ref=e262]:
+          - generic [ref=e263]:
+            - text: 2025-10-23
+            - text: 14:36:46
+      - row "📦 test1 🌍 2025-05-18 17:30:59" [ref=e264]:
+        - cell "📦" [ref=e265]
+        - cell "test1" [ref=e266] [cursor=pointer]
+        - cell [ref=e267]
+        - cell "🌍" [ref=e268]:
+          - link "🌍" [ref=e269] [cursor=pointer]:
+            - /url: https://github.com/israice/test1
+        - cell "2025-05-18 17:30:59" [ref=e270]:
+          - generic [ref=e271]:
+            - text: 2025-05-18
+            - text: 17:30:59
+      - row "📦 ToDo-Game 🌍 2026-02-01 23:53:50" [ref=e272]:
+        - cell "📦" [ref=e273]
+        - cell "ToDo-Game" [ref=e274] [cursor=pointer]
+        - cell [ref=e275]
+        - cell "🌍" [ref=e276]:
+          - link "🌍" [ref=e277] [cursor=pointer]:
+            - /url: https://github.com/israice/ToDo-Game
+        - cell "2026-02-01 23:53:50" [ref=e278]:
+          - generic [ref=e279]:
+            - text: 2026-02-01
+            - text: 23:53:50
+      - row "📦 TODO-Game-From-TELEGRAM 🌍 2026-02-24 01:39:48" [ref=e280]:
+        - cell "📦" [ref=e281]
+        - cell "TODO-Game-From-TELEGRAM" [ref=e282] [cursor=pointer]
+        - cell [ref=e283]
+        - cell "🌍" [ref=e284]:
+          - link "🌍" [ref=e285] [cursor=pointer]:
+            - /url: https://github.com/israice/TODO-Game-From-TELEGRAM
+        - cell "2026-02-24 01:39:48" [ref=e286]:
+          - generic [ref=e287]:
+            - text: 2026-02-24
+            - text: 01:39:48
+      - row "📦 tvlists 🔒 2026-02-06 08:49:35" [ref=e288]:
+        - cell "📦" [ref=e289]
+        - cell "tvlists" [ref=e290] [cursor=pointer]
+        - cell [ref=e291]
+        - cell "🔒" [ref=e292]:
+          - link "🔒" [ref=e293] [cursor=pointer]:
+            - /url: https://github.com/israice/tvlists
+        - cell "2026-02-06 08:49:35" [ref=e294]:
+          - generic [ref=e295]:
+            - text: 2026-02-06
+            - text: 08:49:35
+      - row "📦 two-ajax-blocks 🌍 2025-07-03 23:01:08" [ref=e296]:
+        - cell "📦" [ref=e297]
+        - cell "two-ajax-blocks" [ref=e298] [cursor=pointer]
+        - cell [ref=e299]
+        - cell "🌍" [ref=e300]:
+          - link "🌍" [ref=e301] [cursor=pointer]:
+            - /url: https://github.com/israice/two-ajax-blocks
+        - cell "2025-07-03 23:01:08" [ref=e302]:
+          - generic [ref=e303]:
+            - text: 2025-07-03
+            - text: 23:01:08
+      - row "📦 Universal-CV 🌍 2025-06-22 17:51:32" [ref=e304]:
+        - cell "📦" [ref=e305]
+        - cell "Universal-CV" [ref=e306] [cursor=pointer]
+        - cell [ref=e307]
+        - cell "🌍" [ref=e308]:
+          - link "🌍" [ref=e309] [cursor=pointer]:
+            - /url: https://github.com/israice/Universal-CV
+        - cell "2025-06-22 17:51:32" [ref=e310]:
+          - generic [ref=e311]:
+            - text: 2025-06-22
+            - text: 17:51:32
+      - row "📦 users-db 🌍 2026-02-01 04:25:09" [ref=e312]:
+        - cell "📦" [ref=e313]
+        - cell "users-db" [ref=e314] [cursor=pointer]
+        - cell [ref=e315]
+        - cell "🌍" [ref=e316]:
+          - link "🌍" [ref=e317] [cursor=pointer]:
+            - /url: https://github.com/israice/users-db
+        - cell "2026-02-01 04:25:09" [ref=e318]:
+          - generic [ref=e319]:
+            - text: 2026-02-01
+            - text: 04:25:09
+      - row "📦 VTT-Voice-To-Text 🌍 2025-06-28 10:09:28" [ref=e320]:
+        - cell "📦" [ref=e321]
+        - cell "VTT-Voice-To-Text" [ref=e322] [cursor=pointer]
+        - cell [ref=e323]
+        - cell "🌍" [ref=e324]:
+          - link "🌍" [ref=e325] [cursor=pointer]:
+            - /url: https://github.com/israice/VTT-Voice-To-Text
+        - cell "2025-06-28 10:09:28" [ref=e326]:
+          - generic [ref=e327]:
+            - text: 2025-06-28
+            - text: 10:09:28
+      - row "📦 wfork-n8n-json-collection 🌍 2025-06-16 16:24:55" [ref=e328]:
+        - cell "📦" [ref=e329]
+        - cell "wfork-n8n-json-collection" [ref=e330] [cursor=pointer]
+        - cell [ref=e331]
+        - cell "🌍" [ref=e332]:
+          - link "🌍" [ref=e333] [cursor=pointer]:
+            - /url: https://github.com/israice/wfork-n8n-json-collection
+        - cell "2025-06-16 16:24:55" [ref=e334]:
+          - generic [ref=e335]:
+            - text: 2025-06-16
+            - text: 16:24:55
+      - row "📦 WFORK-TAB 🌍 2025-05-31 22:06:56" [ref=e336]:
+        - cell "📦" [ref=e337]
+        - cell "WFORK-TAB" [ref=e338] [cursor=pointer]
+        - cell [ref=e339]
+        - cell "🌍" [ref=e340]:
+          - link "🌍" [ref=e341] [cursor=pointer]:
+            - /url: https://github.com/israice/WFORK-TAB
+        - cell "2025-05-31 22:06:56" [ref=e342]:
+          - generic [ref=e343]:
+            - text: 2025-05-31
+            - text: 22:06:56
+      - row "📦 01-NEW-FOLDER Local project folder 📁 2026-02-26 07:57:01" [ref=e344]:
+        - cell "📦" [ref=e345]
+        - cell "01-NEW-FOLDER" [ref=e346] [cursor=pointer]
+        - cell "Local project folder" [ref=e347]
+        - cell "📁" [ref=e348]:
+          - link "📁" [ref=e349] [cursor=pointer]:
+            - /url: C:/0_PROJECTS/projects-factory/NEW_PROJECTS/01-NEW-FOLDER
+        - cell "2026-02-26 07:57:01" [ref=e350]:
+          - generic [ref=e351]:
+            - text: 2026-02-26
+            - text: 07:57:01
+      - row "📦 02-NEW-FOLDER Local project folder 📁 2026-02-26 07:15:40" [ref=e352]:
+        - cell "📦" [ref=e353]
+        - cell "02-NEW-FOLDER" [ref=e354] [cursor=pointer]
+        - cell "Local project folder" [ref=e355]
+        - cell "📁" [ref=e356]:
+          - link "📁" [ref=e357] [cursor=pointer]:
+            - /url: C:/0_PROJECTS/projects-factory/NEW_PROJECTS/02-NEW-FOLDER
+        - cell "2026-02-26 07:15:40" [ref=e358]:
+          - generic [ref=e359]:
+            - text: 2026-02-26
+            - text: 07:15:40
+      - row "📦 03-NEW-FOLDER Local project folder 📁 2026-02-26 07:15:56" [ref=e360]:
+        - cell "📦" [ref=e361]
+        - cell "03-NEW-FOLDER" [ref=e362] [cursor=pointer]
+        - cell "Local project folder" [ref=e363]
+        - cell "📁" [ref=e364]:
+          - link "📁" [ref=e365] [cursor=pointer]:
+            - /url: C:/0_PROJECTS/projects-factory/NEW_PROJECTS/03-NEW-FOLDER
+        - cell "2026-02-26 07:15:56" [ref=e366]:
+          - generic [ref=e367]:
+            - text: 2026-02-26
+            - text: 07:15:56
+      - row "📦 04-NEW-FOLDER Local project folder 📁 2026-02-26 07:16:46" [ref=e368]:
+        - cell "📦" [ref=e369]
+        - cell "04-NEW-FOLDER" [ref=e370] [cursor=pointer]
+        - cell "Local project folder" [ref=e371]
+        - cell "📁" [ref=e372]:
+          - link "📁" [ref=e373] [cursor=pointer]:
+            - /url: C:/0_PROJECTS/projects-factory/NEW_PROJECTS/04-NEW-FOLDER
+        - cell "2026-02-26 07:16:46" [ref=e374]:
+          - generic [ref=e375]:
+            - text: 2026-02-26
+            - text: 07:16:46
+      - row "📦 05-NEW-FOLDER Local project folder 📁 2026-02-26 07:57:01" [ref=e376]:
+        - cell "📦" [ref=e377]
+        - cell "05-NEW-FOLDER" [ref=e378] [cursor=pointer]
+        - cell "Local project folder" [ref=e379]
+        - cell "📁" [ref=e380]:
+          - link "📁" [ref=e381] [cursor=pointer]:
+            - /url: C:/0_PROJECTS/projects-factory/NEW_PROJECTS/05-NEW-FOLDER
+        - cell "2026-02-26 07:57:01" [ref=e382]:
+          - generic [ref=e383]:
+            - text: 2026-02-26
+            - text: 07:57:01
+      - row "📦 06-NEW-FOLDER Local project folder 📁 2026-02-26 07:57:17" [ref=e384]:
+        - cell "📦" [ref=e385]
+        - cell "06-NEW-FOLDER" [ref=e386] [cursor=pointer]
+        - cell "Local project folder" [ref=e387]
+        - cell "📁" [ref=e388]:
+          - link "📁" [ref=e389] [cursor=pointer]:
+            - /url: C:/0_PROJECTS/projects-factory/NEW_PROJECTS/06-NEW-FOLDER
+        - cell "2026-02-26 07:57:17" [ref=e390]:
+          - generic [ref=e391]:
+            - text: 2026-02-26
+            - text: 07:57:17
+      - row "📦 07-NEW-FOLDER Local project folder 📁 2026-02-26 08:00:02" [ref=e392]:
+        - cell "📦" [ref=e393]
+        - cell "07-NEW-FOLDER" [ref=e394] [cursor=pointer]
+        - cell "Local project folder" [ref=e395]
+        - cell "📁" [ref=e396]:
+          - link "📁" [ref=e397] [cursor=pointer]:
+            - /url: C:/0_PROJECTS/projects-factory/NEW_PROJECTS/07-NEW-FOLDER
+        - cell "2026-02-26 08:00:02" [ref=e398]:
+          - generic [ref=e399]:
+            - text: 2026-02-26
+            - text: 08:00:02
+      - row "📦 08-NEW-FOLDER Local project folder 📁 2026-02-26 08:00:48" [ref=e400]:
+        - cell "📦" [ref=e401]
+        - cell "08-NEW-FOLDER" [ref=e402] [cursor=pointer]
+        - cell "Local project folder" [ref=e403]
+        - cell "📁" [ref=e404]:
+          - link "📁" [ref=e405] [cursor=pointer]:
+            - /url: C:/0_PROJECTS/projects-factory/NEW_PROJECTS/08-NEW-FOLDER
+        - cell "2026-02-26 08:00:48" [ref=e406]:
+          - generic [ref=e407]:
+            - text: 2026-02-26
+            - text: 08:00:48
+      - row "📦 project1 Local project folder 📁 2026-02-25 12:15:46" [ref=e408]:
+        - cell "📦" [ref=e409]
+        - cell "project1" [ref=e410] [cursor=pointer]
+        - cell "Local project folder" [ref=e411]
+        - cell "📁" [ref=e412]:
+          - link "📁" [ref=e413] [cursor=pointer]:
+            - /url: C:/0_PROJECTS/projects-factory/NEW_PROJECTS/project1
+        - cell "2026-02-25 12:15:46" [ref=e414]:
+          - generic [ref=e415]:
+            - text: 2026-02-25
+            - text: 12:15:46
+      - row "📦 project2 Local project folder 📁 2026-02-25 12:04:48" [ref=e416]:
+        - cell "📦" [ref=e417]
+        - cell "project2" [ref=e418] [cursor=pointer]
+        - cell "Local project folder" [ref=e419]
+        - cell "📁" [ref=e420]:
+          - link "📁" [ref=e421] [cursor=pointer]:
+            - /url: C:/0_PROJECTS/projects-factory/NEW_PROJECTS/project2
+        - cell "2026-02-25 12:04:48" [ref=e422]:
+          - generic [ref=e423]:
+            - text: 2026-02-25
+            - text: 12:04:48

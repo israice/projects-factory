@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Projects Manager</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        *:hover { text-decoration: none !important; }
+        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; }
+        #boot-loader {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1e1e1e;
+            color: #4CAF50;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            z-index: 2000;
+        }
+        #app-root { visibility: hidden; }
+        body.app-ready #app-root { visibility: visible; }
+        body.app-ready #boot-loader { display: none; }
+        body.app-error #boot-loader { color: #ff6b6b; }
+        
+        /* Header */
+        .header-wrapper { display: flex; position: sticky; top: 0; z-index: 100; background: #1e1e1e; }
+        .navbar { flex: 1; display: flex; flex-direction: column; background: #2d2d2d; }
+        .nav-row { display: flex; gap: 10px; padding: 10px 20px; }
+        .nav-row a { color: #e0e0e0; text-decoration: none; padding: 8px 16px; background: #3d3d3d; border-radius: 4px; }
+        .nav-row a:hover { background: #4d4d4d; }
+        .welcome-row { padding: 10px 20px; }
+        .welcome-text { color: #0f0; font-weight: 700; font-family: 'Courier New', monospace; cursor: pointer; }
+        
+        /* Avatar */
+        .logo-wrapper { background: #2d2d2d; padding: 10px 20px; }
+        .avatar-container { position: relative; cursor: pointer; width: 50px; height: 50px; }
+        .avatar-img { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #4CAF50; }
+        .avatar-placeholder { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #4CAF50; 
+                               display: flex; align-items: center; justify-content: center; font-size: 28px; }
+        .avatar-menu { display: none; position: absolute; right: 0; top: 55px; background: #3d3d3d; 
+                       border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); min-width: 150px; }
+        .avatar-menu a { display: block; padding: 10px 16px; color: #e0e0e0; text-decoration: none; }
+        .avatar-menu a:hover { background: #4d4d4d; }
+        
+        /* Table */
+        .table-container { padding: 0 20px 20px; overflow-x: auto; }
+        .table-tools { padding: 0 20px 0; display: flex; justify-content: center; }
+        .table-search {
+            width: min(460px, 100%);
+            padding: 10px 12px;
+            border: 1px solid #4d4d4d;
+            border-radius: 6px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            outline: none;
+        }
+        .table-search:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.25);
+        }
+        table { border-collapse: collapse; width: 100%; min-width: 800px; table-layout: fixed; }
+        th, td { border: 1px solid #444; padding: 10px; text-align: left; vertical-align: middle; }
+        th { background: #2e7d32; color: #fff; text-align: center; cursor: pointer; user-select: none; }
+        th:hover { background: #388e3c; }
+        th.no-sort { cursor: default; }
+        th.no-sort:hover { background: #2e7d32; }
+        .rownum-cell { text-align: center; width: 56px; color: #bdbdbd; }
+        tr { background: #1e1e1e; }
+        .installed-row { background: #1a3a1a; }
+        .new-project-row { background: #3a2a1a; }
+        
+        /* Cells */
+        .logo-cell { text-align: center; width: 60px; cursor: pointer; }
+        .logo-cell.active { background: #2a4a2a; }
+        .logo-icon { font-size: 32px; }
+        .name-cell { cursor: pointer; color: #4CAF50; font-weight: 600; overflow-wrap: anywhere; word-break: break-word; }
+        .name-cell:hover { text-decoration: underline; }
+        .name-cell.active { background: #2a4a2a; }
+        .description-cell { cursor: pointer; overflow-wrap: anywhere; word-break: break-word; }
+        .description-cell.active { background: #2a4a2a; }
+        .url-cell { text-align: center; width: 60px; }
+        .url-link { text-decoration: none; font-size: 24px; }
+        .started-cell { text-align: center; }
+        .col-rownum { width: 56px; }
+        .col-logo { width: 60px; }
+        .col-name { width: 240px; }
+        .col-url { width: 60px; }
+        .col-started { width: 110px; }
+        .date-badge {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 88px;
+            background: #3d3d3d;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.2;
+            white-space: nowrap;
+            text-align: center;
+        }
+        
+        /* Action Row */
+        .action-row { display: none; }
+        .action-row.show { display: table-row; background: #2a2a2a; }
+        .action-cell { padding: 10px; text-align: center; }
+        .action-btn { display: inline-flex; align-items: center; gap: 6px; margin: 0 8px; padding: 8px 16px;
+                      background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .action-btn:hover { background: #45a049; }
+        .action-btn[data-action="delete"] { background: #dc3545; }
+        .action-btn[data-action="delete"]:hover { background: #c82333; }
+        .rename-input { width: 90%; padding: 6px; background: #404040; color: #e0e0e0; 
+                        border: 1px solid #4CAF50; border-radius: 4px; font-size: inherit; }
+        
+        /* Loading */
+        .loading { opacity: 0.6; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="boot-loader">Loading projects...</div>
+    <div id="app-root">
+    <div class="header-wrapper">
+        <div class="navbar">
+            <div class="nav-row">
+                <a href="#" id="nav-username">👨 User: -</a>
+                <a href="#" id="nav-repos">📦 Repos: 0</a>
+                <a href="#" id="nav-installed">📁 Installed: 0</a>
+                <a href="#" id="nav-local-only">🗂️ Local only: 0</a>
+                <a href="#" id="nav-last-url">🚀 Last URL: -</a>
+            </div>
+            <div class="welcome-row">
+                <span class="welcome-text" id="welcome-text">Добро пожаловать, Мастер</span>
+            </div>
+        </div>
+        <div class="logo-wrapper">
+            <div class="avatar-container" id="avatar-container">
+                <div class="avatar-placeholder" id="avatar-placeholder">📦</div>
+                <img class="avatar-img" id="avatar-img" style="display:none">
+                <div class="avatar-menu" id="avatar-menu">
+                    <a href="#" id="btn-create-new">➕ Create New</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-tools">
+        <input
+            id="table-search"
+            class="table-search"
+            type="text"
+            placeholder="Search by Name, Description, URL, date..."
+            autocomplete="off"
+        >
+    </div>
+    <div class="table-container">
+        <table id="repos-table">
+            <colgroup>
+                <col class="col-rownum">
+                <col class="col-logo">
+                <col class="col-name">
+                <col>
+                <col class="col-url">
+                <col class="col-started">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="no-sort">#</th>
+                    <th data-sort="type">Logo</th>
+                    <th data-sort="name">Name</th>
+                    <th data-sort="description">Description</th>
+                    <th data-sort="url">URL</th>
+                    <th data-sort="created_at">Started</th>
+                </tr>
+            </thead>
+            <tbody id="repos-tbody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace(/\/$/, '');
+        const LAST_URL_ROW_KEY = 'projectsFactory:lastUrlRowNo';
+
+        async function refreshDataAndView(withServerRefresh = false) {
+            if (withServerRefresh) await API.post('/api/refresh', {});
+            await State.init();
+            UI.updateHeader();
+            UI.renderTable();
+        }
+
+        function formatCreated(value = '') {
+            if (!value) return '-';
+            const [datePart, timePart = ''] = String(value).split('T');
+            const cleanTime = timePart.replace('Z', '').slice(0, 5);
+            if (!datePart) return '-';
+            return { date: datePart, time: cleanTime || '--:--' };
+        }
+
+        function getCreatedAtMs(value = '') {
+            const ts = Date.parse(String(value || ''));
+            return Number.isFinite(ts) ? ts : -1;
+        }
+
+        function startLiveReload() {
+            let stamp = '';
+            setInterval(async () => {
+                try {
+                    const r = await fetch(`${window.location.pathname}?_lr=${Date.now()}`, { cache: 'no-store' });
+                    if (!r.ok) return;
+                    const html = await r.text();
+                    const next = `${html.length}|${html.slice(0, 120)}|${html.slice(-120)}`;
+                    if (!next) return;
+                    if (!stamp) { stamp = next; return; }
+                    if (next !== stamp) window.location.reload();
+                } catch {}
+            }, 1500);
+        }
+
+        // State
+        const State = {
+            username: '', avatarUrl: '', installedCount: 0, repos: [], count: 0,
+            installedUrls: new Set(),
+            localOnlyCount: 0,
+            lastLaunchedRowNo: null,
+
+            async init() {
+                const [config, reposData] = await Promise.all([
+                    fetch('/api/config').then(r => r.json()),
+                    fetch('/api/repos').then(r => r.json())
+                ]);
+                this.username = config.username;
+                this.avatarUrl = config.avatar_url;
+                this.installedCount = config.installed_count;
+                const repos = reposData.repos || [];
+                const orderedForRowNo = [...repos].sort((a, b) => {
+                    const dt = getCreatedAtMs(b.created_at) - getCreatedAtMs(a.created_at);
+                    if (dt !== 0) return dt;
+                    return String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+                });
+                const rowNoMap = new Map(
+                    orderedForRowNo.map((repo, idx) => [`${repo.name}|${repo.url}`, orderedForRowNo.length - idx])
+                );
+                this.repos = repos.map(repo => ({
+                    ...repo,
+                    __rowNo: rowNoMap.get(`${repo.name}|${repo.url}`) || 0
+                }));
+                this.localOnlyCount = this.repos.filter(r => r.is_new_project).length;
+                this.count = reposData.count || 0;
+                // installedUrls comes from config (actual installed repos from MY_REPOS)
+                this.installedUrls = new Set(
+                    (config.installed_urls || []).map(normalizeRepoUrl)
+                );
+                const savedRowNo = Number(localStorage.getItem(LAST_URL_ROW_KEY) || 0);
+                this.lastLaunchedRowNo = savedRowNo > 0 ? savedRowNo : null;
+            },
+
+            isInstalled(repo) {
+                if (repo.is_new_project) return false;
+                const url = normalizeRepoUrl(repo.url);
+                return this.installedUrls.has(url);
+            }
+        };
+
+        // API
+        const API = {
+            async request(endpoint, options = {}) {
+                const r = await fetch(endpoint, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                const text = await r.text();
+                let data = {};
+                try { data = text ? JSON.parse(text) : {}; } catch {}
+                if (!r.ok) throw new Error(data.detail || data.error || text || `HTTP ${r.status}`);
+                return data;
+            },
+            get: (endpoint) => API.request(endpoint, { method: 'GET' }),
+            post: (endpoint, body) => API.request(endpoint, { method: 'POST', body: JSON.stringify(body) }),
+            installRepos: (urls) => API.post('/api/install', { repos: urls }),
+            deleteRepos: (names) => API.post('/api/delete', { repos: names }),
+            renameLocal: (old, new_) => API.post('/api/rename', { old_name: old, new_name: new_ }),
+            renameGithub: (old, new_) => API.post('/api/rename-github', { old_name: old, new_name: new_ }),
+            updateDescription: (name, description) => API.post('/api/update-description', { name, description }),
+            openFolder: (path) => API.post('/api/open-folder', { path }),
+            createProject: () => API.post('/api/create-project')
+        };
+
+        // UI
+        const UI = {
+            el: {},
+            sortKey: 'created_at',
+            sortDir: 'desc',
+            init() {
+                this.el = {
+                    username: document.getElementById('nav-username'),
+                    repos: document.getElementById('nav-repos'),
+                    installed: document.getElementById('nav-installed'),
+                    localOnly: document.getElementById('nav-local-only'),
+                    lastUrl: document.getElementById('nav-last-url'),
+                    welcome: document.getElementById('welcome-text'),
+                    avatarContainer: document.getElementById('avatar-container'),
+                    avatarImg: document.getElementById('avatar-img'),
+                    avatarPlaceholder: document.getElementById('avatar-placeholder'),
+                    avatarMenu: document.getElementById('avatar-menu'),
+                    search: document.getElementById('table-search'),
+                    tbody: document.getElementById('repos-tbody'),
+                    headers: Array.from(document.querySelectorAll('#repos-table thead th[data-sort]'))
+                };
+                this.updateSortHeader();
+            },
+            setSort(key) {
+                if (this.sortKey === key) {
+                    this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortKey = key;
+                    this.sortDir = key === 'created_at' ? 'desc' : 'asc';
+                }
+                this.updateSortHeader();
+                this.renderTable();
+            },
+            updateSortHeader() {
+                if (!this.el.headers) return;
+                this.el.headers.forEach(h => {
+                    h.classList.remove('sort-asc', 'sort-desc');
+                    if (h.dataset.sort === this.sortKey) {
+                        h.classList.add(this.sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+                    }
+                });
+            },
+            getSortedRepos() {
+                const list = [...State.repos];
+                const dir = this.sortDir === 'asc' ? 1 : -1;
+                const cmpText = (a, b) => String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base' });
+                list.sort((a, b) => {
+                    let result = 0;
+                    switch (this.sortKey) {
+                        case 'name':
+                            result = cmpText(a.name, b.name);
+                            break;
+                        case 'description':
+                            result = cmpText(a.description, b.description);
+                            break;
+                        case 'url':
+                            result = cmpText(a.url, b.url);
+                            break;
+                        case 'created_at': {
+                            result = getCreatedAtMs(a.created_at) - getCreatedAtMs(b.created_at);
+                            break;
+                        }
+                        case 'type': {
+                            const weight = (repo) => repo.is_new_project ? 0 : (repo.private ? 1 : 2);
+                            result = weight(a) - weight(b);
+                            break;
+                        }
+                        default:
+                            result = 0;
+                    }
+                    return result * dir;
+                });
+                return list;
+            },
+            getFilteredRepos() {
+                const query = String(this.el.search?.value || '').trim().toLowerCase();
+                if (!query) return this.getSortedRepos();
+                const tokens = query.split(/\s+/).filter(Boolean);
+                return this.getSortedRepos().filter(repo => {
+                    const created = formatCreated(repo.created_at);
+                    const haystack = [
+                        repo.name,
+                        repo.description,
+                        repo.url,
+                        created.date,
+                        created.time,
+                        repo.private ? 'private lock' : 'public globe',
+                        repo.is_new_project ? 'local folder' : 'github'
+                    ].join(' ').toLowerCase();
+                    return tokens.every(token => haystack.includes(token));
+                });
+            },
+            updateHeader() {
+                this.el.username.textContent = `👨 User: ${State.username}`;
+                this.el.repos.textContent = `📦 Repos: ${State.count}`;
+                this.el.installed.textContent = `📁 Installed: ${State.installedCount}`;
+                this.el.localOnly.textContent = `🗂️ Local only: ${State.localOnlyCount}`;
+                this.el.lastUrl.textContent = `🚀 Last URL: ${State.lastLaunchedRowNo ? '#' + State.lastLaunchedRowNo : '-'}`;
+                if (State.avatarUrl) {
+                    this.el.avatarImg.src = State.avatarUrl;
+                    this.el.avatarImg.style.display = 'block';
+                    this.el.avatarPlaceholder.style.display = 'none';
+                } else {
+                    this.el.avatarImg.style.display = 'none';
+                    this.el.avatarPlaceholder.style.display = 'flex';
+                }
+            },
+            showWelcome(msg) { this.el.welcome.textContent = msg; },
+            markLastUrlLaunch(rowNo) {
+                State.lastLaunchedRowNo = rowNo || null;
+                if (State.lastLaunchedRowNo) localStorage.setItem(LAST_URL_ROW_KEY, String(State.lastLaunchedRowNo));
+                else localStorage.removeItem(LAST_URL_ROW_KEY);
+                this.updateHeader();
+            },
+            renderTable() {
+                this.el.tbody.innerHTML = '';
+                this.getFilteredRepos().forEach(repo => {
+                    const installed = State.isInstalled(repo);
+                    const isNew = repo.is_new_project;
+                    const rowClass = isNew ? 'new-project-row' : installed ? 'installed-row' : '';
+                    const logo = isNew ? '📁' : (repo.private ? '🔒' : '🌍');
+                    const created = formatCreated(repo.created_at);
+                    const tr = document.createElement('tr');
+                    if (rowClass) tr.className = rowClass;
+                    tr.dataset.name = repo.name;
+                    tr.dataset.url = repo.url;
+                    tr.dataset.isNew = isNew;
+                    tr.dataset.installed = installed;
+                    tr.innerHTML = `
+                        <td class="rownum-cell">${repo.__rowNo || ''}</td>
+                        <td class="logo-cell" data-repo="${this.escape(repo.name)}" data-url="${this.escape(repo.url)}"><span class="logo-icon">📦</span></td>
+                        <td class="name-cell" data-repo="${this.escape(repo.name)}" data-url="${this.escape(repo.url)}">${this.escape(repo.name)}</td>
+                        <td class="description-cell" data-repo="${this.escape(repo.name)}" data-url="${this.escape(repo.url)}">${this.escape(repo.description || '')}</td>
+                        <td class="url-cell">
+                            <a href="${this.escape(repo.url)}" class="url-link" data-url="${this.escape(repo.url)}" data-is-local="${isNew}">${logo}</a>
+                        </td>
+                        <td class="started-cell"><span class="date-badge">${created.date}<br>${created.time}</span></td>
+                    `;
+                    this.el.tbody.appendChild(tr);
+                });
+            },
+            openActionRow(cell) {
+                const row = cell.closest('tr');
+                const name = cell.dataset.repo;
+                const url = cell.dataset.url;
+                const isNew = row.dataset.isNew === 'true';
+                const installed = row.dataset.installed === 'true';
+                const active = cell.classList.contains('active');
+
+                this.closeAllActionRows(cell);
+
+                if (!active) {
+                    const actionRow = document.createElement('tr');
+                    actionRow.className = 'action-row show';
+                    let buttons = '';
+                    if (isNew) {
+                        buttons = `
+                            <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Delete</button>
+                        `;
+                    } else if (installed) {
+                        buttons = `
+                            <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Delete</button>
+                        `;
+                    } else {
+                        buttons = `
+                            <button class="action-btn" data-action="install" data-name="${this.escape(name)}" data-url="${this.escape(url)}">📥 Install</button>
+                        `;
+                    }
+                    actionRow.innerHTML = `<td colspan="6" class="action-cell">${buttons}</td>`;
+                    row.parentNode.insertBefore(actionRow, row.nextSibling);
+                    cell.classList.add('active');
+                } else {
+                    cell.classList.remove('active');
+                    const ar = row.nextElementSibling;
+                    if (ar && ar.classList.contains('action-row')) ar.remove();
+                }
+            },
+            closeAllActionRows(exceptCell = null) {
+                document.querySelectorAll('.logo-cell.active').forEach(c => {
+                    if (exceptCell && c === exceptCell) return;
+                    c.classList.remove('active');
+                    const ar = c.closest('tr').nextElementSibling;
+                    if (ar && ar.classList.contains('action-row')) ar.remove();
+                });
+            },
+            escape(str) {
+                const d = document.createElement('div');
+                d.textContent = str;
+                return d.innerHTML;
+            },
+            markInstalled(url) {
+                const row = document.querySelector(`tr[data-url="${CSS.escape(url)}"]`);
+                if (row) { row.classList.add('installed-row'); row.dataset.installed = 'true'; }
+            },
+            removeRow(name) {
+                const row = document.querySelector(`tr[data-name="${CSS.escape(name)}"]`);
+                if (row) {
+                    if (row.dataset.isNew === 'true') {
+                        row.style.display = 'none';
+                        // Close action row for deleted new project
+                        const ar = row.nextElementSibling;
+                        if (ar && ar.classList.contains('action-row')) ar.remove();
+                    } else {
+                        row.classList.remove('installed-row');
+                        row.dataset.installed = 'false';
+                    }
+                }
+            }
+        };
+
+        // Actions
+        async function handleCreateProject() {
+            UI.showWelcome('⏳ Creating project...');
+            try {
+                const r = await API.createProject();
+                UI.showWelcome(r.message || '✅ Project created');
+                await refreshDataAndView(false);
+            } catch (e) { UI.showWelcome('❌ Create failed: ' + e.message); }
+        }
+
+        async function handleInstallConfirm(repo) {
+            UI.showWelcome('⏳ Installing ' + repo.name + '...');
+            try {
+                await API.installRepos([repo.url]);
+                State.installedUrls.add(normalizeRepoUrl(repo.url));
+                State.installedCount = State.installedUrls.size;
+                UI.updateHeader();
+                UI.markInstalled(repo.url);
+                UI.showWelcome('✅ Installed ' + repo.name);
+                closeActionRow(repo.url);
+                return true;
+            } catch (e) { UI.showWelcome('❌ Install failed: ' + e.message); }
+            return false;
+        }
+
+        async function handleDeleteConfirm(repo) {
+            UI.showWelcome('⏳ Deleting ' + repo.name + '...');
+            try {
+                await API.deleteRepos([repo.name]);
+                const url = normalizeRepoUrl(repo.url);
+                State.installedUrls.delete(url);
+                State.installedCount = State.installedUrls.size;
+                if (repo.url.includes('NEW_PROJECTS')) {
+                    State.repos = State.repos.filter(r => r.name !== repo.name);
+                }
+                UI.updateHeader();
+                UI.removeRow(repo.name);
+                UI.showWelcome('✅ Deleted ' + repo.name);
+                // Close action row after deletion
+                closeActionRow(repo.url);
+            } catch (e) { UI.showWelcome('❌ Delete failed: ' + e.message); }
+        }
+
+        function makeEditable(cell, name, url, endpoint) {
+            const original = name;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = original;
+            input.className = 'rename-input';
+            cell.textContent = '';
+            cell.appendChild(input);
+            input.focus();
+            input.select();
+
+            async function save() {
+                const newName = input.value.trim();
+                if (newName && newName !== original) {
+                    try {
+                        const fn = endpoint.includes('rename-github') ? 'renameGithub' : 'renameLocal';
+                        await API[fn](original, newName);
+                        const newUrl = url.replace(new RegExp(`${original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), newName);
+                        const repoItem = State.repos.find(r => r.name === original);
+                        if (repoItem) {
+                            repoItem.name = newName;
+                            repoItem.url = newUrl;
+                        }
+                        cell.textContent = newName;
+                        cell.dataset.repo = newName;
+                        cell.dataset.url = newUrl;
+                        const row = cell.closest('tr');
+                        if (row) {
+                            row.dataset.name = newName;
+                            row.dataset.url = newUrl;
+                            const logoCell = row.querySelector('.logo-cell');
+                            if (logoCell) {
+                                logoCell.dataset.repo = newName;
+                                logoCell.dataset.url = newUrl;
+                            }
+                            const descCell = row.querySelector('.description-cell');
+                            if (descCell) {
+                                descCell.dataset.repo = newName;
+                                descCell.dataset.url = newUrl;
+                            }
+                        }
+                        updateActionButtons(original, newName);
+                        UI.showWelcome('✅ Renamed to ' + newName);
+                        closeActionRow(newUrl);
+                    } catch (e) {
+                        UI.showWelcome('❌ Rename failed: ' + e.message);
+                        cell.textContent = original;
+                    }
+                } else { cell.textContent = original; }
+            }
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') input.blur();
+                else if (e.key === 'Escape') cell.textContent = original;
+            });
+        }
+
+        function makeDescriptionEditable(cell, name) {
+            const original = cell.textContent || '';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = original;
+            input.className = 'rename-input';
+            cell.textContent = '';
+            cell.appendChild(input);
+            input.focus();
+            input.select();
+
+            async function save() {
+                const newDescription = input.value.trim();
+                if (newDescription !== original) {
+                    try {
+                        await API.updateDescription(name, newDescription);
+                        const repoItem = State.repos.find(r => r.name === name);
+                        if (repoItem) repoItem.description = newDescription;
+                        cell.textContent = newDescription;
+                        UI.showWelcome('✅ Description updated');
+                    } catch (e) {
+                        UI.showWelcome('❌ Description update failed: ' + e.message);
+                        cell.textContent = original;
+                    }
+                } else {
+                    cell.textContent = original;
+                }
+            }
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') input.blur();
+                else if (e.key === 'Escape') cell.textContent = original;
+            });
+        }
+
+        function updateActionButtons(oldName, newName) {
+            document.querySelectorAll('.action-btn').forEach(btn => {
+                if (btn.dataset.name === oldName) btn.dataset.name = newName;
+            });
+        }
+
+        function closeActionRow(url) {
+            const row = document.querySelector(`tr[data-url="${CSS.escape(url)}"]`);
+            if (row) {
+                const logoCell = row.querySelector('.logo-cell');
+                if (logoCell) logoCell.classList.remove('active');
+                const ar = row.nextElementSibling;
+                if (ar && ar.classList.contains('action-row')) ar.remove();
+            }
+        }
+
+        function finishBootstrap(errorMessage = '') {
+            if (errorMessage) {
+                document.body.classList.add('app-error');
+                const loader = document.getElementById('boot-loader');
+                if (loader) loader.textContent = errorMessage;
+                return;
+            }
+            document.body.classList.remove('app-error');
+            document.body.classList.add('app-ready');
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', async () => {
+            startLiveReload();
+            UI.init();
+            try {
+                await refreshDataAndView(false);
+                finishBootstrap();
+            } catch (e) {
+                finishBootstrap('Failed to load data');
+                UI.showWelcome('❌ Init failed: ' + e.message);
+                return;
+            }
+
+            // Avatar menu
+            UI.el.avatarContainer.addEventListener('click', (e) => {
+                e.stopPropagation();
+                UI.el.avatarMenu.style.display = UI.el.avatarMenu.style.display === 'flex' ? 'none' : 'flex';
+            });
+            document.addEventListener('click', (e) => {
+                if (!UI.el.avatarContainer.contains(e.target)) UI.el.avatarMenu.style.display = 'none';
+            });
+
+            document.getElementById('btn-create-new').addEventListener('click', async (e) => {
+                e.preventDefault();
+                UI.el.avatarMenu.style.display = 'none';
+                await handleCreateProject();
+                // Ensure menu stays closed
+                UI.el.avatarMenu.style.display = 'none';
+            });
+
+            UI.el.welcome.addEventListener('click', () => UI.showWelcome('Добро пожаловать, Мастер'));
+            UI.el.search.addEventListener('input', () => UI.renderTable());
+            UI.el.headers.forEach(header => {
+                header.addEventListener('click', () => UI.setSort(header.dataset.sort));
+            });
+
+            document.addEventListener('click', (e) => {
+                const cell = e.target.closest('.logo-cell');
+                if (!cell) return;
+                e.stopPropagation();
+                UI.openActionRow(cell);
+            });
+
+            document.addEventListener('click', (e) => {
+                const cell = e.target.closest('.name-cell');
+                if (!cell) return;
+                e.stopPropagation();
+                const row = cell.closest('tr');
+                const endpoint = row && row.dataset.isNew === 'true' ? '/api/rename' : '/api/rename-github';
+                makeEditable(cell, cell.dataset.repo, cell.dataset.url, endpoint);
+            });
+
+            document.addEventListener('click', (e) => {
+                const cell = e.target.closest('.description-cell');
+                if (!cell) return;
+                e.stopPropagation();
+                const row = cell.closest('tr');
+                if (!row || row.dataset.isNew === 'true') return;
+                makeDescriptionEditable(cell, cell.dataset.repo);
+            });
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.logo-cell') || e.target.closest('.action-row')) return;
+                UI.closeAllActionRows();
+            });
+
+            document.addEventListener('click', async (e) => {
+                const link = e.target.closest('.url-link');
+                if (link) {
+                    e.preventDefault();
+                    if (link.dataset.isLocal === 'true') {
+                        try {
+                            await API.openFolder(link.dataset.url);
+                            const row = link.closest('tr');
+                            const rowNo = row ? Number(row.querySelector('.rownum-cell')?.textContent || 0) : 0;
+                            UI.markLastUrlLaunch(rowNo);
+                            UI.showWelcome('✅ Opened in VS Code');
+                        } catch (err) {
+                            UI.showWelcome('❌ Open failed: ' + err.message);
+                        }
+                    } else {
+                        const row = link.closest('tr');
+                        const repo = {
+                            name: row ? row.dataset.name : '',
+                            url: link.dataset.url
+                        };
+                        const isInstalled = row && row.dataset.installed === 'true';
+                        if (!isInstalled) {
+                            const ok = await handleInstallConfirm(repo);
+                            if (!ok) return;
+                        }
+                        try {
+                            await API.openFolder(repo.name || repo.url);
+                            const rowNo = row ? Number(row.querySelector('.rownum-cell')?.textContent || 0) : 0;
+                            UI.markLastUrlLaunch(rowNo);
+                            UI.showWelcome('✅ Opened in VS Code');
+                        } catch (err) {
+                            UI.showWelcome('❌ Open failed: ' + err.message);
+                        }
+                    }
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('.action-btn');
+                if (btn) {
+                    e.preventDefault();
+                    const { action, name: repoName, url: repoUrl } = btn.dataset;
+                    const repo = { name: repoName, url: repoUrl };
+                    if (action === 'install') {
+                        if (confirm(`Install "${repoName}"?`)) handleInstallConfirm(repo);
+                    }
+                    else if (action === 'delete') {
+                        if (confirm(`Delete "${repoName}"?`)) handleDeleteConfirm(repo);
+                    }
+                }
+            });
+
+            // Keep list up to date automatically without manual refresh button.
+            setInterval(async () => {
+                try {
+                    await refreshDataAndView(false);
+                } catch {}
+            }, 120000);
+        });
+    </script>
+    </div>
+</body>
+</html>
