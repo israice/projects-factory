@@ -814,15 +814,13 @@
 
         async function handlePushConfirm(repo) {
             closeActionRow(repo.url);
+            setRepoCanPush(repo, false);
             UI.showWelcome('⏳ Updating VERSION.md and pushing ' + repo.name + '...');
             try {
                 await API.pushRepo(repo.url, '');
-                const row = document.querySelector(`tr[data-url="${CSS.escape(repo.url)}"]`);
-                if (row) row.dataset.canPush = 'false';
-                const stateItem = State.repos.find(r => r.name === repo.name && r.url === repo.url);
-                if (stateItem) stateItem.can_push = false;
                 UI.showWelcome('✅ Push completed for ' + repo.name);
             } catch (e) {
+                setRepoCanPush(repo, true);
                 UI.showWelcome('❌ Push failed: ' + e.message);
             }
         }
@@ -988,6 +986,18 @@
                 const ar = row.nextElementSibling;
                 if (ar && ar.classList.contains('action-row')) ar.remove();
             }
+        }
+
+        function setRepoCanPush(repo, canPush) {
+            const value = !!canPush;
+            const row = document.querySelector(`tr[data-url="${CSS.escape(repo.url)}"]`);
+            if (row) {
+                row.dataset.canPush = value ? 'true' : 'false';
+                const logoCell = row.querySelector('.logo-cell');
+                if (logoCell) logoCell.classList.toggle('has-unpushed', value);
+            }
+            const stateItem = State.repos.find(r => r.name === repo.name && r.url === repo.url);
+            if (stateItem) stateItem.can_push = value;
         }
 
         function finishBootstrap(errorMessage = '') {

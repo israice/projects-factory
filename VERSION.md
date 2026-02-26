@@ -52,3 +52,4 @@ v0.0.17 - update backend + docs: open folder action, repository link action, bot
 v0.0.18 - update frontend + server: API updates, push flow, row behavior
 v0.0.19 - added project folder open action; added repository link button; updated action buttons
 v0.0.20 - added project folder open action; added repository link button; updated action buttons
+v0.0.21 - added Push button in project row panel; updated versioning
