@@ -61,3 +61,4 @@ v0.0.25 - fixed auto version message generation
 v0.0.26 - added API request handling
 v0.0.27 - added configuration loading
 v0.0.28 - fixed HOT PAGE RELOAD
+v0.0.29 - added TASKS.md
