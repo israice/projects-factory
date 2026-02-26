@@ -7,6 +7,7 @@ Run with: python main.py
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from ipaddress import ip_address
@@ -79,6 +80,21 @@ def run_script(script: Path, args=None, timeout=None):
     return result
 
 
+def run_command(cmd, cwd=None, timeout=None):
+    result = subprocess.run(
+        cmd,
+        cwd=str(cwd) if cwd else None,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if result.returncode != 0:
+        raise Exception((result.stderr or result.stdout or "Failed").strip()[:400])
+    return result
+
+
 def ensure_create_project_script():
     script = MY_REPOS_DIR / "Create-Project-Folder" / "create_new_project.py"
     if script.exists():
@@ -119,6 +135,16 @@ def get_new_projects():
         return projects
     for entry in NEW_PROJECTS_DIR.iterdir():
         if entry.is_dir():
+            # If folder is already connected to GitHub, do not show it as local-only.
+            try:
+                if (entry / ".git").exists():
+                    r = subprocess.run(["git", "-C", str(entry), "remote", "get-url", "origin"],
+                                       capture_output=True, text=True, timeout=5)
+                    origin = (r.stdout or "").strip().lower()
+                    if r.returncode == 0 and "github.com" in origin:
+                        continue
+            except:
+                pass
             try:
                 ts = entry.stat().st_ctime
                 created = datetime.fromtimestamp(ts).isoformat() + "Z"
@@ -299,6 +325,61 @@ async def create_project(request: Request):
                 folder = output.split('Project "')[1].split('" created')[0]
         return {"success": True, "message": f'Project "{folder}" created' if folder else "Project created",
                 "folder_name": folder}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/api/add-to-github")
+async def add_to_github(payload: dict, request: Request):
+    require_write_access(request)
+    name = str(payload.get("name", "")).strip()
+    description = str(payload.get("description", "")).strip()
+    visibility = str(payload.get("visibility", "public")).strip().lower() or "public"
+    if not name or not safe_name(name):
+        raise HTTPException(400, "Invalid project name")
+    if visibility not in ("public", "private"):
+        raise HTTPException(400, "Invalid visibility")
+
+    source_path = NEW_PROJECTS_DIR / name
+    if not source_path.exists() or not source_path.is_dir():
+        raise HTTPException(404, f"Folder '{name}' not found")
+    target_path = MY_REPOS_DIR / name
+    if target_path.exists():
+        raise HTTPException(400, f"Folder '{name}' already exists in MY_REPOS")
+
+    commit_date = datetime.now().strftime("%d.%m.%Y")
+    commit_message = f"v0.0.1 - {name} started {commit_date}"
+    repo_slug = f"{GITHUB_USERNAME}/{name}" if GITHUB_USERNAME and GITHUB_USERNAME != "Unknown" else name
+
+    try:
+        # Move project into MY_REPOS first, then create/push GitHub repository from there.
+        try:
+            source_path.rename(target_path)
+        except OSError:
+            shutil.move(str(source_path), str(target_path))
+
+        project_path = target_path
+        if not (project_path / ".git").exists():
+            run_command(["git", "init"], cwd=project_path, timeout=20)
+        run_command(["git", "add", "."], cwd=project_path, timeout=60)
+        run_command(["git", "commit", "--allow-empty", "-m", commit_message], cwd=project_path, timeout=60)
+
+        visibility_flag = "--private" if visibility == "private" else "--public"
+        gh_cmd = [
+            "gh", "repo", "create", repo_slug, visibility_flag,
+            "--description", description or "Local project folder",
+            "--source", ".", "--remote", "origin", "--push",
+        ]
+        run_command(gh_cmd, cwd=project_path, timeout=120)
+
+        run_script(BACKEND_DIR / "get_all_github_projects.py", timeout=TIMEOUTS["refresh"])
+        return {
+            "success": True,
+            "name": name,
+            "repo": repo_slug,
+            "visibility": visibility,
+            "commit_message": commit_message,
+        }
     except Exception as e:
         raise HTTPException(500, str(e))
 

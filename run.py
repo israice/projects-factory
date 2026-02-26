@@ -13,6 +13,10 @@ import os
 import sys
 from pathlib import Path
 
+# Prevent creating __pycache__ when launching via run.py
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+sys.dont_write_bytecode = True
+
 # Add project root to path
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))

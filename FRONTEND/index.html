@@ -109,6 +109,7 @@
         .action-btn { display: inline-flex; align-items: center; gap: 6px; margin: 0 8px; padding: 8px 16px;
                       background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
         .action-btn:hover { background: #45a049; }
+        .action-visibility { margin: 0 8px; padding: 8px 10px; border: 1px solid #4d4d4d; border-radius: 4px; background: #2a2a2a; color: #e0e0e0; }
         .action-btn[data-action="delete"] { background: #dc3545; }
         .action-btn[data-action="delete"]:hover { background: #c82333; }
         .action-btn[data-action="delete-github"] { background: #b71c1c; }
@@ -179,6 +180,52 @@
     <script>
         const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace(/\/$/, '');
         const LAST_URL_ROW_KEY = 'projectsFactory:lastUrlRowNo';
+        const LOCAL_DESC_KEY = 'projectsFactory:localDescriptions';
+
+        function readLocalDescriptions() {
+            try {
+                const raw = localStorage.getItem(LOCAL_DESC_KEY);
+                const parsed = raw ? JSON.parse(raw) : {};
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch {
+                return {};
+            }
+        }
+
+        function writeLocalDescriptions(map) {
+            try {
+                localStorage.setItem(LOCAL_DESC_KEY, JSON.stringify(map || {}));
+            } catch {}
+        }
+
+        function setLocalDescription(name, description) {
+            const key = String(name || '').trim();
+            if (!key) return;
+            const map = readLocalDescriptions();
+            if (description) map[key] = description;
+            else delete map[key];
+            writeLocalDescriptions(map);
+        }
+
+        function removeLocalDescription(name) {
+            const key = String(name || '').trim();
+            if (!key) return;
+            const map = readLocalDescriptions();
+            if (!(key in map)) return;
+            delete map[key];
+            writeLocalDescriptions(map);
+        }
+
+        function renameLocalDescription(oldName, newName) {
+            const oldKey = String(oldName || '').trim();
+            const newKey = String(newName || '').trim();
+            if (!oldKey || !newKey || oldKey === newKey) return;
+            const map = readLocalDescriptions();
+            if (!(oldKey in map)) return;
+            map[newKey] = map[oldKey];
+            delete map[oldKey];
+            writeLocalDescriptions(map);
+        }
 
         async function refreshDataAndView(withServerRefresh = false) {
             if (withServerRefresh) await API.post('/api/refresh', {});
@@ -221,6 +268,7 @@
             installedUrls: new Set(),
             localOnlyCount: 0,
             lastLaunchedRowNo: null,
+            localDescriptions: {},
 
             async init() {
                 const [config, reposData] = await Promise.all([
@@ -243,6 +291,12 @@
                     ...repo,
                     __rowNo: rowNoMap.get(`${repo.name}|${repo.url}`) || 0
                 }));
+                this.localDescriptions = readLocalDescriptions();
+                this.repos.forEach(repo => {
+                    if (!repo.is_new_project) return;
+                    const localDesc = this.localDescriptions[repo.name];
+                    if (typeof localDesc === 'string') repo.description = localDesc;
+                });
                 this.localOnlyCount = this.repos.filter(r => r.is_new_project).length;
                 this.count = reposData.count || 0;
                 // installedUrls comes from config (actual installed repos from MY_REPOS)
@@ -292,6 +346,7 @@
             get: (endpoint) => API.request(endpoint, { method: 'GET' }),
             post: (endpoint, body) => API.request(endpoint, { method: 'POST', body: JSON.stringify(body) }),
             installRepos: (urls) => API.post('/api/install', { repos: urls }),
+            addToGithub: (name, description, visibility = 'public') => API.post('/api/add-to-github', { name, description, visibility }),
             deleteRepos: (names) => API.post('/api/delete', { repos: names }),
             deleteGithubRepo: (name) => API.post('/api/delete-github', { name }),
             renameLocal: (old, new_) => API.post('/api/rename', { old_name: old, new_name: new_ }),
@@ -463,21 +518,23 @@
                 this.closeAllActionRows(cell);
 
                 if (!active) {
+                    if (!isNew && !installed) return;
                     const actionRow = document.createElement('tr');
                     actionRow.className = 'action-row show';
                     let buttons = '';
                     if (isNew) {
                         buttons = `
+                            <select class="action-visibility" data-action="visibility">
+                                <option value="public" selected>Public</option>
+                                <option value="private">Private</option>
+                            </select>
+                            <button class="action-btn" data-action="add-to-github" data-name="${this.escape(name)}" data-url="${this.escape(url)}">☁️ Add to GitHub</button>
                             <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Local Delete</button>
                         `;
                     } else if (installed) {
                         buttons = `
                             <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Local Delete</button>
                             <button class="action-btn" data-action="delete-github" data-name="${this.escape(name)}" data-url="${this.escape(url)}">☁️ Delete from GitHub</button>
-                        `;
-                    } else {
-                        buttons = `
-                            <button class="action-btn" data-action="install" data-name="${this.escape(name)}" data-url="${this.escape(url)}">📥 Install</button>
                         `;
                     }
                     actionRow.innerHTML = `<td colspan="6" class="action-cell">${buttons}</td>`;
@@ -555,6 +612,8 @@
                 State.installedUrls.delete(url);
                 State.installedCount = State.installedUrls.size;
                 if (repo.url.includes('NEW_PROJECTS')) {
+                    removeLocalDescription(repo.name);
+                    State.localDescriptions = readLocalDescriptions();
                     State.repos = State.repos.filter(r => r.name !== repo.name);
                 }
                 UI.updateHeader();
@@ -563,6 +622,22 @@
                 // Close action row after deletion
                 closeActionRow(repo.url);
             } catch (e) { UI.showWelcome('❌ Delete failed: ' + e.message); }
+        }
+
+        async function handleAddToGithubConfirm(repo, visibility = 'public') {
+            closeActionRow(repo.url);
+            UI.showWelcome(`⏳ Creating ${visibility} GitHub repository for ${repo.name}...`);
+            try {
+                const sourceRepo = State.repos.find(r => r.name === repo.name && r.url === repo.url);
+                const description = sourceRepo?.description || '';
+                const r = await API.addToGithub(repo.name, description, visibility);
+                removeLocalDescription(repo.name);
+                State.localDescriptions = readLocalDescriptions();
+                UI.showWelcome(`✅ Added to GitHub (${visibility}): ` + (r.repo || repo.name));
+                await refreshDataAndView(false);
+            } catch (e) {
+                UI.showWelcome('❌ Add to GitHub failed: ' + e.message);
+            }
         }
 
         async function handleDeleteGithubConfirm(repo) {
@@ -640,6 +715,10 @@
                         const fn = endpoint.includes('rename-github') ? 'renameGithub' : 'renameLocal';
                         await API[fn](original, newName);
                         const newUrl = url.replace(new RegExp(`${original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), newName);
+                        if (fn === 'renameLocal') {
+                            renameLocalDescription(original, newName);
+                            State.localDescriptions = readLocalDescriptions();
+                        }
                         const repoItem = State.repos.find(r => r.name === original);
                         if (repoItem) {
                             repoItem.name = newName;
@@ -679,7 +758,7 @@
             });
         }
 
-        function makeDescriptionEditable(cell, name) {
+        function makeDescriptionEditable(cell, name, isLocal = false) {
             const original = cell.textContent || '';
             const input = document.createElement('input');
             input.type = 'text';
@@ -694,8 +773,13 @@
                 const newDescription = input.value.trim();
                 if (newDescription !== original) {
                     try {
-                        await API.updateDescription(name, newDescription);
                         const repoItem = State.repos.find(r => r.name === name);
+                        if (isLocal) {
+                            setLocalDescription(name, newDescription);
+                            State.localDescriptions = readLocalDescriptions();
+                        } else {
+                            await API.updateDescription(name, newDescription);
+                        }
                         if (repoItem) repoItem.description = newDescription;
                         cell.textContent = newDescription;
                         UI.showWelcome('✅ Description updated');
@@ -793,8 +877,9 @@
                 if (!cell) return;
                 e.stopPropagation();
                 const row = cell.closest('tr');
-                if (!row || row.dataset.isNew === 'true') return;
-                makeDescriptionEditable(cell, cell.dataset.repo);
+                if (!row) return;
+                const isLocal = row.dataset.isNew === 'true';
+                makeDescriptionEditable(cell, cell.dataset.repo, isLocal);
             });
             document.addEventListener('click', (e) => {
                 if (e.target.closest('.logo-cell') || e.target.closest('.action-row')) return;
@@ -821,8 +906,11 @@
                     e.preventDefault();
                     const { action, name: repoName, url: repoUrl } = btn.dataset;
                     const repo = { name: repoName, url: repoUrl };
-                    if (action === 'install') {
-                        if (confirm(`Install "${repoName}"?`)) handleInstallConfirm(repo);
+                    if (action === 'add-to-github') {
+                        const actionCell = btn.closest('.action-cell');
+                        const visibilitySelect = actionCell ? actionCell.querySelector('.action-visibility') : null;
+                        const vis = visibilitySelect && visibilitySelect.value === 'private' ? 'private' : 'public';
+                        handleAddToGithubConfirm(repo, vis);
                     }
                     else if (action === 'delete') {
                         if (confirm(`Delete "${repoName}"?`)) handleDeleteConfirm(repo);
