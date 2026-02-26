@@ -1,3 +1,6 @@
+# TASKS
+- open folder to fullscreen with window on top
+- open vscode with fullscreen with window on top
 - убедиться что во всех проектах есть папка SCREEBSHOTS с изоброжениями
 - перенести редактирование текста в отдельные кнопки
 - перенести настройку выбора над кнокой
