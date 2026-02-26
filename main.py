@@ -556,6 +556,12 @@ async def index():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
 
 
+@app.get("/api/dev-reload-token")
+async def dev_reload_token_compat():
+    # Compatibility endpoint for stale browser tabs that still poll this path.
+    return {"enabled": False}
+
+
 @app.get("/favicon.ico")
 async def favicon():
     return FileResponse(str(FRONTEND_DIR / "favicon.svg"), media_type="image/svg+xml")

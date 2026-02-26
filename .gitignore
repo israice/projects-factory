@@ -5,3 +5,5 @@ NEW_PROJECTS/
 
 .ruff_cache
 __pycache__/
+FRONTEND/node_modules/
+FRONTEND/dist/

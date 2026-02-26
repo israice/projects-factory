@@ -191,6 +191,35 @@ Disable it with:
 HOT_RELOAD=0
 ```
 
+### Frontend HMR (Vite)
+
+For live frontend updates without full page reload, `python run.py` now starts both processes:
+
+```bash
+python run.py
+```
+
+Open:
+- Frontend (Vite): http://127.0.0.1:5173
+- Backend API: http://127.0.0.1:5999
+
+One-time setup:
+
+```bash
+cd FRONTEND
+npm install
+```
+
+If dependencies are missing, `python run.py` will auto-run `npm install` in `FRONTEND/`.
+
+`vite.config.mjs` proxies `/api` and `/static` to FastAPI, so existing frontend API calls keep working.
+
+Disable frontend dev server if needed:
+
+```env
+FRONTEND_HMR=0
+```
+
 ### API Documentation
 
 Interactive API docs available at:
