@@ -189,37 +189,16 @@ Disable it with:
 HOT_RELOAD=0
 ```
 
-### Frontend HMR (Vite)
+### Frontend Dev HMR
 
-For live frontend updates without full page reload, `python run.py` now starts both processes:
+`python run.py` starts backend + Vite HMR automatically.
 
-```bash
-python run.py
-```
+Open frontend at:
+- `http://127.0.0.1:5173`
 
-Open:
-- Frontend (Vite): http://127.0.0.1:5173
-- Backend API: http://127.0.0.1:5999
-
-One-time setup:
-
-```bash
-cd FRONTEND
-npm install
-```
-
-If dependencies are missing, `python run.py` will auto-run `npm install` in `FRONTEND/`.
-
-`vite.config.mjs` proxies `/api` and `/static` to FastAPI, so existing frontend API calls keep working.
-When launched via `python run.py`, proxy target is passed automatically via env (`PF_BACKEND_HOST`, `PF_BACKEND_PORT`).
-UI markup for hot updates is in `FRONTEND/app.template.html` (not in `index.html`).
-Table/action-row markup templates are in `FRONTEND/ui.templates.js` and hot-reload without full page refresh.
-
-Disable frontend dev server if needed:
-
-```env
-FRONTEND_HMR=0
-```
+Notes:
+- edit `FRONTEND/app.template.html`, `FRONTEND/ui.templates.js`, `FRONTEND/app.css`, `FRONTEND/app.js`
+- avoid editing `FRONTEND/index.html` during dev (that one may still trigger full reload)
 
 ### API Documentation
 

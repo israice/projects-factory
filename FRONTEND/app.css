@@ -1,9 +1,16 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
         *:hover { text-decoration: none !important; }
-        body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; }
-        #boot-loader {
-            position: fixed;
-            inset: 0;
+body { font-family: Arial, sans-serif; background: #1e1e1e; color: #e0e0e0; }
+#app-shell { visibility: hidden; }
+#app-shell > * { visibility: hidden; }
+#app-shell:empty { display: none; }
+#app-shell > #app-root { visibility: hidden; }
+body.app-ready #app-shell { visibility: visible; }
+body.app-ready #app-shell > * { visibility: visible; }
+body.app-ready #app-shell > #app-root { visibility: visible; }
+#boot-loader {
+    position: fixed;
+    inset: 0;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -13,10 +20,10 @@
             font-size: 18px;
             z-index: 2000;
         }
-        #app-root { visibility: hidden; }
-        body.app-ready #app-root { visibility: visible; }
-        body.app-ready #boot-loader { display: none; }
-        body.app-error #boot-loader { color: #ff6b6b; }
+#app-root { visibility: hidden; }
+body.app-ready #app-root { visibility: visible; }
+body.app-ready #boot-loader { display: none; }
+body.app-error #boot-loader { color: #ff6b6b; }
         
         /* Header */
         .header-wrapper { display: flex; position: sticky; top: 0; z-index: 100; background: #1e1e1e; }

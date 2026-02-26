@@ -28,7 +28,7 @@ python run.py
 
 # UPDATE
 git add .
-git commit -m "v0.0.16 - added confirm module"
+git commit -m "v0.0.18 - fixed HOT PAGE RELOAD"
 git push
 python run.py
 
@@ -60,3 +60,4 @@ v0.0.24 - updated action buttons; updated backend logic; added Push button in pr
 v0.0.25 - fixed auto version message generation
 v0.0.26 - added API request handling
 v0.0.27 - added configuration loading
+v0.0.28 - fixed HOT PAGE RELOAD

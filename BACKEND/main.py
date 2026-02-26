@@ -555,6 +555,26 @@ async def index():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
 
 
+@app.get("/app.js")
+async def app_js():
+    return FileResponse(str(FRONTEND_DIR / "app.js"), media_type="application/javascript")
+
+
+@app.get("/ui.templates.js")
+async def ui_templates_js():
+    return FileResponse(str(FRONTEND_DIR / "ui.templates.js"), media_type="application/javascript")
+
+
+@app.get("/app.css")
+async def app_css():
+    return FileResponse(str(FRONTEND_DIR / "app.css"), media_type="text/css")
+
+
+@app.get("/app.template.html")
+async def app_template():
+    return FileResponse(str(FRONTEND_DIR / "app.template.html"), media_type="text/html")
+
+
 @app.get("/favicon.ico")
 async def favicon():
     return FileResponse(str(FRONTEND_DIR / "favicon.svg"), media_type="image/svg+xml")
@@ -1012,4 +1032,3 @@ async def push_repo(payload: PushPayload, request: Request):
         return {"success": True, "path": str(resolved), "message": commit_message}
     except Exception as e:
         raise HTTPException(500, str(e))
-

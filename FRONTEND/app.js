@@ -1,9 +1,73 @@
-import appTemplate from "./app.template.html?raw";
+import appTemplateRaw from "./app.template.html?raw";
 import * as UiTemplates from "./ui.templates.js";
 
 const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace(/\/$/, '');
         let appEventController = null;
         let templateApi = UiTemplates;
+        let appTemplate = appTemplateRaw;
+        const hotData = import.meta.hot?.data || {};
+        const isHotModuleReload = !!hotData.wasMounted;
+        const hotSnapshot = hotData.snapshot || null;
+        const hotState = hotData.state || null;
+        function setTextIfChanged(el, value) {
+            if (!el) return;
+            const next = String(value ?? '');
+            if (el.textContent !== next) el.textContent = next;
+        }
+        function recalcRowNumbers(repos) {
+            const ordered = [...repos].sort((a, b) => {
+                const dt = getCreatedAtMs(b.created_at) - getCreatedAtMs(a.created_at);
+                if (dt !== 0) return dt;
+                return String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+            });
+            const map = new Map(ordered.map((repo, idx) => [`${repo.name}|${repo.url}`, ordered.length - idx]));
+            repos.forEach(repo => { repo.__rowNo = map.get(`${repo.name}|${repo.url}`) || 0; });
+        }
+        function recalcStateCounters() {
+            State.localOnlyCount = State.repos.filter(r => !!r.is_new_project).length;
+            State.count = State.repos.filter(r => !r.is_new_project).length;
+            State.installedCount = State.installedUrls.size;
+            recalcRowNumbers(State.repos);
+        }
+        function captureStateSnapshot() {
+            return {
+                username: State.username,
+                avatarUrl: State.avatarUrl,
+                installedCount: State.installedCount,
+                repos: Array.isArray(State.repos) ? [...State.repos] : [],
+                count: State.count,
+                installedUrls: Array.from(State.installedUrls || []),
+                localOnlyCount: State.localOnlyCount,
+                lastLaunchedRowNo: State.lastLaunchedRowNo,
+                localDescriptions: State.localDescriptions || {},
+                defaultPushMessage: State.defaultPushMessage || DEFAULT_PUSH_MESSAGE,
+            };
+        }
+        function restoreStateSnapshot(snapshot) {
+            if (!snapshot || typeof snapshot !== 'object') return false;
+            State.username = snapshot.username || '';
+            State.avatarUrl = snapshot.avatarUrl || '';
+            State.installedCount = Number(snapshot.installedCount || 0);
+            State.repos = Array.isArray(snapshot.repos) ? [...snapshot.repos] : [];
+            State.count = Number(snapshot.count || 0);
+            State.installedUrls = new Set(Array.isArray(snapshot.installedUrls) ? snapshot.installedUrls : []);
+            State.localOnlyCount = Number(snapshot.localOnlyCount || 0);
+            State.lastLaunchedRowNo = snapshot.lastLaunchedRowNo ?? null;
+            State.localDescriptions = snapshot.localDescriptions && typeof snapshot.localDescriptions === 'object'
+                ? snapshot.localDescriptions
+                : {};
+            State.defaultPushMessage = String(snapshot.defaultPushMessage || DEFAULT_PUSH_MESSAGE);
+            recalcRowNumbers(State.repos);
+            return true;
+        }
+        function guessNewProjectPath(folderName = '') {
+            const base = State.repos.find(r => r.is_new_project && String(r.url || '').includes('NEW_PROJECTS'))?.url || '';
+            if (!base || !folderName) return folderName;
+            const normalized = String(base).replace(/\\/g, '/');
+            const idx = normalized.lastIndexOf('/');
+            if (idx < 0) return folderName;
+            return `${normalized.slice(0, idx + 1)}${folderName}`;
+        }
         const LAST_URL_ROW_KEY = 'projectsFactory:lastUrlRowNo';
         const LOCAL_DESC_KEY = 'projectsFactory:localDescriptions';
         const DEFAULT_PUSH_MESSAGE = '';
@@ -315,14 +379,14 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 });
             },
             updateHeader() {
-                this.el.username.textContent = State.username || '-';
-                this.el.repos.textContent = `📦 Repos: ${State.count}`;
-                this.el.installed.textContent = `📁 Downloaded: ${State.installedCount}`;
-                this.el.localOnly.textContent = `🗂️ New Projects: ${State.localOnlyCount}`;
+                setTextIfChanged(this.el.username, State.username || '-');
+                setTextIfChanged(this.el.repos, `📦 Repos: ${State.count}`);
+                setTextIfChanged(this.el.installed, `📁 Downloaded: ${State.installedCount}`);
+                setTextIfChanged(this.el.localOnly, `🗂️ New Projects: ${State.localOnlyCount}`);
                 const nextRepo = State.getNextLaunchRepo();
-                this.el.lastUrl.textContent = `🚀 Next: ${nextRepo ? Number(nextRepo.__rowNo) : '-'}`;
+                setTextIfChanged(this.el.lastUrl, `🚀 Next: ${nextRepo ? Number(nextRepo.__rowNo) : '-'}`);
                 if (State.avatarUrl) {
-                    this.el.avatarImg.src = State.avatarUrl;
+                    if (this.el.avatarImg.src !== State.avatarUrl) this.el.avatarImg.src = State.avatarUrl;
                     this.el.avatarImg.style.display = 'block';
                     this.el.avatarPlaceholder.style.display = 'none';
                 } else {
@@ -346,32 +410,83 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 else localStorage.removeItem(LAST_URL_ROW_KEY);
                 this.updateHeader();
             },
-            renderTable() {
-                this.el.tbody.innerHTML = '';
-                this.getFilteredRepos().forEach(repo => {
-                    const installed = State.isInstalled(repo);
-                    const isNew = repo.is_new_project;
-                    const rowClass = isNew ? 'new-project-row' : installed ? 'installed-row' : '';
-                    const logoClass = repo.can_push ? 'logo-cell has-unpushed' : 'logo-cell';
-                    const logo = isNew ? '📁' : (repo.private ? '🔒' : '🌍');
-                    const created = formatCreated(repo.created_at);
-                    const tr = document.createElement('tr');
-                    if (rowClass) tr.className = rowClass;
-                    tr.dataset.name = repo.name;
-                    tr.dataset.url = repo.url;
-                    tr.dataset.isNew = isNew;
-                    tr.dataset.installed = installed;
-                    tr.dataset.canPush = repo.can_push ? 'true' : 'false';
-                    tr.innerHTML = templateApi.renderRepoRow({
-                        repo,
-                        created,
-                        isNew,
-                        logoClass,
-                        logo,
-                        escape: this.escape
-                    });
-                    this.el.tbody.appendChild(tr);
+            buildRowKey(repo) {
+                return `${repo.name}|${repo.url}`;
+            },
+            patchRepoRow(tr, repo, installed) {
+                const isNew = repo.is_new_project;
+                const rowClass = isNew ? 'new-project-row' : installed ? 'installed-row' : '';
+                const logoClass = repo.can_push ? 'logo-cell has-unpushed' : 'logo-cell';
+                const logo = isNew ? '📁' : (repo.private ? '🔒' : '🌍');
+                const created = formatCreated(repo.created_at);
+                const nextHtml = templateApi.renderRepoRow({
+                    repo,
+                    created,
+                    isNew,
+                    logoClass,
+                    logo,
+                    escape: this.escape
                 });
+                if (tr.innerHTML !== nextHtml) tr.innerHTML = nextHtml;
+                tr.className = rowClass;
+                tr.dataset.key = this.buildRowKey(repo);
+                tr.dataset.name = repo.name;
+                tr.dataset.url = repo.url;
+                tr.dataset.isNew = isNew ? 'true' : 'false';
+                tr.dataset.installed = installed ? 'true' : 'false';
+                tr.dataset.canPush = repo.can_push ? 'true' : 'false';
+            },
+            patchActionRowForRepo(repoUrl) {
+                const row = document.querySelector(`tr[data-url="${CSS.escape(repoUrl || '')}"]`);
+                if (!row) return;
+                const actionRow = row.nextElementSibling;
+                if (!actionRow || !actionRow.classList.contains('action-row')) return;
+                const name = row.dataset.name || '';
+                const url = row.dataset.url || '';
+                const isNew = row.dataset.isNew === 'true';
+                const installed = row.dataset.installed === 'true';
+                const canPush = row.dataset.canPush === 'true';
+                const buttons = templateApi.renderActionButtons({
+                    isNew,
+                    installed,
+                    canPush,
+                    name,
+                    url,
+                    isHttpUrl,
+                    escape: this.escape
+                });
+                const nextHtml = templateApi.renderActionRowCell(buttons);
+                if (actionRow.innerHTML !== nextHtml) actionRow.innerHTML = nextHtml;
+                loadProjectScreenshots(actionRow, { name, url });
+            },
+            renderTable() {
+                const tbody = this.el.tbody;
+                const activeUrl = document.querySelector('.logo-cell.active')?.dataset?.url || '';
+                this.closeAllActionRows();
+                tbody.querySelectorAll('tr.action-row').forEach(r => r.remove());
+
+                const repos = this.getFilteredRepos();
+                const desiredKeys = new Set(repos.map(repo => this.buildRowKey(repo)));
+                const existingRows = new Map(
+                    Array.from(tbody.querySelectorAll('tr[data-key]')).map(row => [row.dataset.key, row])
+                );
+
+                existingRows.forEach((row, key) => {
+                    if (!desiredKeys.has(key)) row.remove();
+                });
+
+                repos.forEach((repo, index) => {
+                    const key = this.buildRowKey(repo);
+                    let tr = existingRows.get(key);
+                    if (!tr) tr = document.createElement('tr');
+                    this.patchRepoRow(tr, repo, State.isInstalled(repo));
+                    const currentAtIndex = tbody.children[index];
+                    if (currentAtIndex !== tr) tbody.insertBefore(tr, currentAtIndex || null);
+                });
+                if (activeUrl) {
+                    const activeCell = document.querySelector(`.logo-cell[data-url="${CSS.escape(activeUrl)}"]`);
+                    if (activeCell) this.openActionRow(activeCell);
+                }
             },
             openActionRow(cell) {
                 const row = cell.closest('tr');
@@ -420,24 +535,6 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 d.textContent = str;
                 return d.innerHTML;
             },
-            markInstalled(url) {
-                const row = document.querySelector(`tr[data-url="${CSS.escape(url)}"]`);
-                if (row) { row.classList.add('installed-row'); row.dataset.installed = 'true'; }
-            },
-            removeRow(name) {
-                const row = document.querySelector(`tr[data-name="${CSS.escape(name)}"]`);
-                if (row) {
-                    if (row.dataset.isNew === 'true') {
-                        row.style.display = 'none';
-                        // Close action row for deleted new project
-                        const ar = row.nextElementSibling;
-                        if (ar && ar.classList.contains('action-row')) ar.remove();
-                    } else {
-                        row.classList.remove('installed-row');
-                        row.dataset.installed = 'false';
-                    }
-                }
-            }
         };
 
         // Actions
@@ -445,8 +542,25 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             UI.showWelcome('⏳ Creating project...');
             try {
                 const r = await API.createProject();
+                const folderName = String(r.folder_name || '').trim();
+                if (folderName) {
+                    const exists = State.repos.some(repo => repo.is_new_project && repo.name === folderName);
+                    if (!exists) {
+                        State.repos.push({
+                            name: folderName,
+                            url: guessNewProjectPath(folderName),
+                            private: false,
+                            description: State.localDescriptions?.[folderName] || '',
+                            created_at: new Date().toISOString(),
+                            is_new_project: true,
+                            can_push: false,
+                        });
+                        recalcStateCounters();
+                        UI.updateHeader();
+                        UI.renderTable();
+                    }
+                }
                 UI.showWelcome(r.message || '✅ Project created');
-                await refreshDataAndView(false);
             } catch (e) { UI.showWelcome('❌ Create failed: ' + e.message); }
         }
 
@@ -455,9 +569,9 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             try {
                 await API.installRepos([repo.url]);
                 State.installedUrls.add(normalizeRepoUrl(repo.url));
-                State.installedCount = State.installedUrls.size;
+                recalcStateCounters();
                 UI.updateHeader();
-                UI.markInstalled(repo.url);
+                UI.renderTable();
                 UI.showWelcome('✅ Installed ' + repo.name);
                 closeActionRow(repo.url);
                 return true;
@@ -475,10 +589,11 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 if (repo.url.includes('NEW_PROJECTS')) {
                     removeLocalDescription(repo.name);
                     State.localDescriptions = readLocalDescriptions();
-                    State.repos = State.repos.filter(r => r.name !== repo.name);
+                    State.repos = State.repos.filter(r => !(r.name === repo.name && r.url === repo.url));
                 }
+                recalcStateCounters();
                 UI.updateHeader();
-                UI.removeRow(repo.name);
+                UI.renderTable();
                 UI.showWelcome('✅ Deleted ' + repo.name);
                 // Close action row after deletion
                 closeActionRow(repo.url);
@@ -494,8 +609,21 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 const r = await API.addToGithub(repo.name, description, visibility);
                 removeLocalDescription(repo.name);
                 State.localDescriptions = readLocalDescriptions();
+                const repoUrl = String(r.repo || '').trim();
+                const normalizedUrl = repoUrl
+                    ? normalizeRepoUrl(repoUrl.startsWith('http') ? repoUrl : `https://github.com/${repoUrl}`)
+                    : '';
+                if (sourceRepo) {
+                    sourceRepo.is_new_project = false;
+                    sourceRepo.private = visibility === 'private';
+                    sourceRepo.can_push = false;
+                    if (normalizedUrl) sourceRepo.url = normalizedUrl;
+                }
+                if (normalizedUrl) State.installedUrls.add(normalizedUrl);
+                recalcStateCounters();
+                UI.updateHeader();
+                UI.renderTable();
                 UI.showWelcome(`✅ Added to GitHub (${visibility}): ` + (r.repo || repo.name));
-                await refreshDataAndView(false);
             } catch (e) {
                 UI.showWelcome('❌ Add to GitHub failed: ' + e.message);
             }
@@ -506,8 +634,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             try {
                 await API.deleteGithubRepo(repo.name);
                 State.repos = State.repos.filter(r => !(r.name === repo.name && r.url === repo.url));
-                State.count = State.repos.filter(r => !r.is_new_project).length;
-                State.localOnlyCount = State.repos.filter(r => r.is_new_project).length;
+                recalcStateCounters();
                 UI.updateHeader();
                 UI.renderTable();
                 UI.showWelcome('✅ Deleted from GitHub ' + repo.name);
@@ -602,25 +729,9 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                             repoItem.name = newName;
                             repoItem.url = newUrl;
                         }
-                        cell.textContent = newName;
-                        cell.dataset.repo = newName;
-                        cell.dataset.url = newUrl;
-                        const row = cell.closest('tr');
-                        if (row) {
-                            row.dataset.name = newName;
-                            row.dataset.url = newUrl;
-                            const logoCell = row.querySelector('.logo-cell');
-                            if (logoCell) {
-                                logoCell.dataset.repo = newName;
-                                logoCell.dataset.url = newUrl;
-                            }
-                            const descCell = row.querySelector('.description-cell');
-                            if (descCell) {
-                                descCell.dataset.repo = newName;
-                                descCell.dataset.url = newUrl;
-                            }
-                        }
-                        updateActionButtons(original, newName);
+                        recalcStateCounters();
+                        UI.updateHeader();
+                        UI.renderTable();
                         UI.showWelcome('✅ Renamed to ' + newName);
                         closeActionRow(newUrl);
                     } catch (e) {
@@ -659,7 +770,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                             await API.updateDescription(name, newDescription);
                         }
                         if (repoItem) repoItem.description = newDescription;
-                        cell.textContent = newDescription;
+                        UI.renderTable();
                         UI.showWelcome('✅ Description updated');
                     } catch (e) {
                         UI.showWelcome('❌ Description update failed: ' + e.message);
@@ -674,12 +785,6 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             input.addEventListener('keydown', e => {
                 if (e.key === 'Enter') input.blur();
                 else if (e.key === 'Escape') cell.textContent = original;
-            });
-        }
-
-        function updateActionButtons(oldName, newName) {
-            document.querySelectorAll('.action-btn').forEach(btn => {
-                if (btn.dataset.name === oldName) btn.dataset.name = newName;
             });
         }
 
@@ -703,6 +808,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             }
             const stateItem = State.repos.find(r => r.name === repo.name && r.url === repo.url);
             if (stateItem) stateItem.can_push = value;
+            UI.patchActionRowForRepo(repo.url);
         }
 
         async function loadProjectScreenshots(actionRow, repo) {
@@ -906,9 +1012,11 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             }, { signal });
         }
 
-        function startup() {
+        async function startup() {
             mountTemplate(appTemplate);
-            bootstrapApp();
+            const skipDataReload = isHotModuleReload && restoreStateSnapshot(hotState);
+            await bootstrapApp({ skipDataReload, keepWelcome: skipDataReload });
+            if (skipDataReload) restoreUiSnapshot(hotSnapshot);
         }
 
         if (document.readyState === 'loading') {
@@ -921,9 +1029,8 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             import.meta.hot.accept(() => {});
             import.meta.hot.accept('./app.template.html?raw', async (mod) => {
                 const snap = captureUiSnapshot();
-                const nextTemplate = mod?.default || appTemplate;
-                const shell = document.getElementById('app-shell');
-                if (shell) shell.innerHTML = nextTemplate;
+                appTemplate = mod?.default || appTemplate;
+                mountTemplate(appTemplate);
                 await bootstrapApp({ remount: false, keepWelcome: true, skipDataReload: true });
                 restoreUiSnapshot(snap);
             });
@@ -934,6 +1041,9 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 restoreUiSnapshot(snap);
             });
             import.meta.hot.dispose(() => {
+                import.meta.hot.data.wasMounted = true;
+                import.meta.hot.data.snapshot = captureUiSnapshot();
+                import.meta.hot.data.state = captureStateSnapshot();
                 if (appEventController) appEventController.abort();
                 if (UI.welcomeTimer) {
                     clearTimeout(UI.welcomeTimer);
