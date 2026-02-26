@@ -1,421 +1,406 @@
 /**
- * Main application JavaScript for GitHub Repositories Manager
+ * Main Application Entry Point
+ * Initializes the app and handles user interactions
  */
 
-document.addEventListener("DOMContentLoaded", function() {
-    const nameCells = document.querySelectorAll(".name-cell");
-    const installedCountEl = document.getElementById("installed-count");
-    const modal = document.getElementById("confirm-modal");
-    const modalRepoList = document.getElementById("modal-repo-list");
-    const modalCancel = document.getElementById("modal-cancel");
-    const modalConfirm = document.getElementById("modal-confirm");
-    const welcomeText = document.getElementById("welcome-text");
-    const deleteModal = document.getElementById("delete-modal");
-    const modalDeleteRepoList = document.getElementById("modal-delete-repo-list");
-    const modalDeleteCancel = document.getElementById("modal-delete-cancel");
-    const modalDeleteConfirm = document.getElementById("modal-delete-confirm");
-    const avatarContainer = document.getElementById("avatar-container");
-    const avatarMenu = document.getElementById("avatar-menu");
+// ---- Initialization ----
 
-    // Toggle avatar menu on avatar click
-    if (avatarContainer && avatarMenu) {
-        avatarContainer.addEventListener("click", function(e) {
-            e.stopPropagation();
-            const isHidden = avatarMenu.style.display === "none" || avatarMenu.style.display === "";
-            // Close all other menus first
-            if (avatarMenu) avatarMenu.style.display = "none";
-            // Toggle this menu
-            if (isHidden) {
-                avatarMenu.style.display = "flex";
-            }
-        });
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        // Initialize modules
+        UI.initElements();
+        await State.init();
+        
+        // Check if table was server-rendered (SSR mode)
+        const hasServerRows = document.querySelectorAll('#repos-tbody tr').length > 0;
+        
+        if (hasServerRows) {
+            console.log('Using server-rendered table (SSR)');
+            // Just update header, table is already rendered
+            UI.updateHeader();
+        } else {
+            console.log('Rendering table client-side (SPA)');
+            UI.updateHeader();
+            UI.renderTable();
+        }
+        
+        applyInitialSort();
+        setupEventListeners();
+
+        // Check for welcome message from previous action
+        checkWelcomeMessage();
+
+        console.log('Application initialized successfully');
+    } catch (error) {
+        console.error('Failed to initialize application:', error);
+        UI.showWelcome('❌ Failed to load: ' + error.message);
     }
+});
 
-    // Close avatar menu when clicking outside
-    document.addEventListener("click", function(e) {
-        if (avatarMenu && !avatarContainer.contains(e.target)) {
-            avatarMenu.style.display = "none";
+// ---- Event Listeners Setup ----
+
+function setupEventListeners() {
+    // Avatar menu toggle
+    UI.elements.avatarContainer.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (UI.elements.avatarMenu.style.display === 'none' || !UI.elements.avatarMenu.style.display) {
+            UI.showAvatarMenu();
+        } else {
+            UI.hideAvatarMenu();
         }
     });
 
-    // Check for message in URL and store in sessionStorage, then clean URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const message = urlParams.get("message");
-    if (message) {
-        sessionStorage.setItem("welcomeMessage", message);
-        window.history.replaceState({}, "", window.location.pathname);
-    }
+    // Close avatar menu on outside click
+    document.addEventListener('click', function(e) {
+        if (!UI.elements.avatarContainer.contains(e.target)) {
+            UI.hideAvatarMenu();
+        }
+    });
 
-    // Display stored message if available
-    const storedMessage = sessionStorage.getItem("welcomeMessage");
-    if (storedMessage) {
-        welcomeText.textContent = storedMessage;
-        sessionStorage.removeItem("welcomeMessage");
-    }
+    // Avatar menu actions
+    UI.elements.btnCreateNew.addEventListener('click', async function(e) {
+        e.preventDefault();
+        UI.hideAvatarMenu();
+        await handleCreateProject();
+    });
 
-    let sortColumn = "created_at";
-    let sortDirection = -1;
-    let pendingInstall = null;
-    let pendingDelete = null;
+    UI.elements.btnRefresh.addEventListener('click', async function(e) {
+        e.preventDefault();
+        UI.hideAvatarMenu();
+        await handleRefresh();
+    });
 
-    // Get table structure dynamically
-    const table = document.querySelector("table");
-    const headerRow = table.querySelector("tr:first-child");
-    const totalColumns = headerRow.children.length;
+    // Welcome text click to reset
+    UI.elements.welcomeText.addEventListener('click', function() {
+        UI.showWelcome('Добро пожаловать, Мастер');
+    });
 
-    // Find created_at column index dynamically
-    const createdAtTh = headerRow.querySelector('[data-sort="created_at"]');
-    const createdAtIndex = createdAtTh ? Array.from(headerRow.children).indexOf(createdAtTh) : totalColumns - 1;
-
-    // Sort by created_at column by default (descending - newest first)
-    const rows = Array.from(table.querySelectorAll("tr:not(:first-child)"));
-    document.querySelectorAll("th.sortable").forEach(h => h.classList.remove("sort-asc", "sort-desc"));
-    if (createdAtTh) {
-        createdAtTh.classList.add("sort-desc");
-        rows.sort((a, b) => {
-            const aVal = a.cells[createdAtIndex].textContent.trim();
-            const bVal = b.cells[createdAtIndex].textContent.trim();
-            if (aVal < bVal) return 1;
-            if (aVal > bVal) return -1;
-            return 0;
-        });
-        rows.forEach(row => table.appendChild(row));
-    }
-    table.insertBefore(headerRow, table.firstChild);
-
-    // Toggle action row on name cell click
-    nameCells.forEach(cell => {
-        cell.addEventListener("click", function(e) {
-            e.stopPropagation();
-            openActionRow(this);
+    // Table sorting
+    document.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', function() {
+            const column = this.dataset.sort;
+            State.sortBy(column);
+            UI.renderTable();
+            UI.updateSortIndicators(State.sortColumn, State.sortDirection);
         });
     });
 
-    // Handle URL link clicks
-    const urlLinks = document.querySelectorAll(".url-link");
-    urlLinks.forEach(link => {
-        link.addEventListener("click", function(e) {
-            const isLocal = this.dataset.isLocal === "true";
-            
-            // Only handle left-click (button 0)
-            // Middle-click (button 1) and right-click should use default browser behavior
-            if (e.button !== 0) return;
-            
+    // Name cell clicks (open action row)
+    document.addEventListener('click', function(e) {
+        const nameCell = e.target.closest('.name-cell');
+        if (nameCell) {
+            e.stopPropagation();
+            UI.openActionRow(nameCell);
+        }
+    });
+
+    // URL link clicks
+    document.addEventListener('click', function(e) {
+        const urlLink = e.target.closest('.url-link');
+        if (urlLink) {
             e.preventDefault();
             e.stopPropagation();
-            const url = this.dataset.url;
-
-            if (isLocal) {
-                // Open local folder via backend
-                fetch("/open-folder", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ path: url })
-                }).catch(err => console.error("Failed to open folder:", err));
-            } else {
-                // Open GitHub URL in same tab
-                window.location.href = url;
-            }
-        });
+            handleUrlClick(urlLink);
+        }
     });
 
-    function openActionRow(cell) {
-        const row = cell.closest("tr");
-        const repoName = cell.dataset.repo;
-        const repoUrl = cell.dataset.url;
-        const isActive = cell.classList.contains("active");
+    // Action button clicks
+    document.addEventListener('click', function(e) {
+        const actionBtn = e.target.closest('.action-btn');
+        if (actionBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleActionButton(actionBtn);
+        }
+    });
 
-        // Reset all cells
-        nameCells.forEach(otherCell => {
-            otherCell.classList.remove("active");
-            const otherActionRow = otherCell.closest("tr").nextElementSibling;
-            if (otherActionRow && otherActionRow.classList.contains("action-row")) {
-                otherActionRow.classList.remove("show");
-            }
-        });
+    // Modal: Cancel install
+    UI.elements.modalCancel.addEventListener('click', function() {
+        UI.hideInstallModal();
+        State.pendingInstall = null;
+    });
 
-        // Toggle current
-        if (!isActive) {
-            let actionRow = row.nextElementSibling;
-            const isInstalled = row.classList.contains("installed-row");
-            const isNewProject = row.classList.contains("new-project-row");
-            if (!actionRow || !actionRow.classList.contains("action-row")) {
-                actionRow = document.createElement("tr");
-                actionRow.className = "action-row";
-                actionRow.id = "bottom-panel-" + repoName;
-                // Show Delete+Rename for new projects, Delete for installed, Install for non-installed
-                if (isInstalled || isNewProject) {
-                    if (isNewProject) {
-                        actionRow.innerHTML = '<td colspan="' + totalColumns + '" class="action-cell"><button class="action-btn" data-action="delete" data-name="' + repoName + '" data-url="' + repoUrl + '"><span class="action-btn-icon">🗑️</span><span class="action-btn-label">Delete</span></button><button class="action-btn" data-action="rename-local" data-name="' + repoName + '" data-url="' + repoUrl + '"><span class="action-btn-icon">✏️</span><span class="action-btn-label">Rename</span></button></td>';
-                    } else {
-                        actionRow.innerHTML = '<td colspan="' + totalColumns + '" class="action-cell"><button class="action-btn" data-action="delete" data-name="' + repoName + '" data-url="' + repoUrl + '"><span class="action-btn-icon">🗑️</span><span class="action-btn-label">Delete</span></button><button class="action-btn" data-action="rename-github" data-name="' + repoName + '" data-url="' + repoUrl + '"><span class="action-btn-icon">✏️</span><span class="action-btn-label">Rename</span></button></td>';
-                    }
-                } else {
-                    actionRow.innerHTML = '<td colspan="' + totalColumns + '" class="action-cell"><button class="action-btn" data-action="install" data-name="' + repoName + '" data-url="' + repoUrl + '"><span class="action-btn-icon">📥</span><span class="action-btn-label">Install</span></button><button class="action-btn" data-action="rename-github" data-name="' + repoName + '" data-url="' + repoUrl + '"><span class="action-btn-icon">✏️</span><span class="action-btn-label">Rename</span></button></td>';
+    // Modal: Confirm install
+    UI.elements.modalConfirm.addEventListener('click', function() {
+        UI.hideInstallModal();
+        if (State.pendingInstall) {
+            handleInstallConfirm(State.pendingInstall);
+            State.pendingInstall = null;
+        }
+    });
+
+    // Modal: Cancel delete
+    UI.elements.modalDeleteCancel.addEventListener('click', function() {
+        UI.hideDeleteModal();
+        State.pendingDelete = null;
+    });
+
+    // Modal: Confirm delete
+    UI.elements.modalDeleteConfirm.addEventListener('click', function() {
+        UI.hideDeleteModal();
+        if (State.pendingDelete) {
+            handleDeleteConfirm(State.pendingDelete);
+            State.pendingDelete = null;
+        }
+    });
+
+    // Close modals on overlay click
+    UI.elements.confirmModal.addEventListener('click', function(e) {
+        if (e.target === UI.elements.confirmModal) {
+            UI.hideInstallModal();
+            State.pendingInstall = null;
+        }
+    });
+
+    UI.elements.deleteModal.addEventListener('click', function(e) {
+        if (e.target === UI.elements.deleteModal) {
+            UI.hideDeleteModal();
+            State.pendingDelete = null;
+        }
+    });
+}
+
+// ---- Action Handlers ----
+
+async function handleCreateProject() {
+    UI.showWelcome('⏳ Creating project...');
+    try {
+        const result = await API.createProject();
+        UI.showWelcome(result.message || '✅ Project created');
+
+        // Reload data
+        await State.init();
+        UI.updateHeader();
+        UI.renderTable();
+        applyInitialSort();
+    } catch (error) {
+        UI.showWelcome('❌ Create failed: ' + error.message);
+    }
+}
+
+async function handleRefresh() {
+    UI.showWelcome('⏳ Refreshing...');
+    try {
+        const result = await API.refreshRepos();
+        UI.showWelcome(result.message || '✅ Refreshed');
+
+        // Reload data
+        await State.init();
+        UI.updateHeader();
+        UI.renderTable();
+        applyInitialSort();
+    } catch (error) {
+        UI.showWelcome('❌ Refresh failed: ' + error.message);
+    }
+}
+
+function handleUrlClick(link) {
+    const isLocal = link.dataset.isLocal === 'true';
+    const url = link.dataset.url;
+
+    if (isLocal) {
+        // Open local folder via API
+        API.openFolder(url).catch(err => console.error('Failed to open folder:', err));
+    } else {
+        // Open GitHub URL in same tab
+        window.location.href = url;
+    }
+}
+
+function handleActionButton(btn) {
+    const action = btn.dataset.action;
+    const repoName = btn.dataset.name;
+    const repoUrl = btn.dataset.url;
+
+    switch (action) {
+        case 'install':
+            State.pendingInstall = { name: repoName, url: repoUrl };
+            UI.showInstallModal(repoName);
+            break;
+        case 'delete':
+            State.pendingDelete = { name: repoName, url: repoUrl };
+            UI.showDeleteModal(repoName);
+            break;
+        case 'rename-local':
+            makeCellEditable(repoName, repoUrl, '/api/rename');
+            break;
+        case 'rename-github':
+            makeCellEditable(repoName, repoUrl, '/api/rename-github');
+            break;
+    }
+}
+
+async function handleInstallConfirm(repo) {
+    UI.showWelcome('⏳ Installing ' + repo.name + '...');
+    try {
+        const result = await API.installRepos([repo.url]);
+
+        State.markAsInstalled(repo.url);
+        UI.updateInstalledCount();
+        UI.markRowAsInstalled(repo.url);
+        UI.showWelcome('✅ Installed ' + repo.name);
+
+        // Close action row
+        closeActionRow(repo.url);
+    } catch (error) {
+        UI.showWelcome('❌ Install failed: ' + error.message);
+    }
+}
+
+async function handleDeleteConfirm(repo) {
+    UI.showWelcome('⏳ Deleting ' + repo.name + '...');
+    try {
+        const result = await API.deleteRepos([repo.name]);
+
+        const isNewProject = repo.url.includes('NEW_PROJECTS');
+        State.removeInstalled(repo.name, repo.url);
+        UI.updateInstalledCount();
+        UI.removeRow(repo.name, repo.url, isNewProject);
+        UI.showWelcome('✅ Deleted ' + repo.name);
+    } catch (error) {
+        UI.showWelcome('❌ Delete failed: ' + error.message);
+    }
+}
+
+// ---- Rename Functionality ----
+
+function makeCellEditable(repoName, repoUrl, endpoint) {
+    const cell = document.querySelector(`.name-cell[data-repo="${CSS.escape(repoName)}"]`);
+    if (!cell) return;
+
+    const originalName = cell.dataset.repo;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = originalName;
+    input.className = 'rename-input';
+    input.style.cssText = `
+        width: 90%;
+        padding: 4px;
+        background: #404040;
+        color: #e0e0e0;
+        border: 1px solid #4CAF50;
+        border-radius: 4px;
+        font-size: inherit;
+        font-family: inherit;
+    `;
+
+    cell.textContent = '';
+    cell.appendChild(input);
+    input.focus();
+    input.select();
+
+    async function saveValue() {
+        const newName = input.value.trim();
+        if (newName && newName !== originalName) {
+            try {
+                const apiMethod = endpoint.includes('rename-github') ? 'renameGithub' : 'renameLocal';
+                const result = await API[apiMethod](originalName, newName);
+
+                // Update state
+                const newUrl = updateUrlWithName(repoUrl, originalName, newName);
+                State.renameRepo(originalName, newName, newUrl);
+
+                // Update UI
+                cell.textContent = newName;
+                cell.dataset.repo = newName;
+                cell.dataset.url = newUrl;
+
+                // Update action row buttons
+                updateActionRowButtons(originalName, newName);
+
+                // Update pending operations
+                if (State.pendingDelete && State.pendingDelete.name === originalName) {
+                    State.pendingDelete.name = newName;
                 }
-                row.parentNode.insertBefore(actionRow, row.nextSibling);
+                if (State.pendingInstall && State.pendingInstall.name === originalName) {
+                    State.pendingInstall.name = newName;
+                }
+
+                UI.showWelcome('✅ Renamed to ' + newName);
+                closeActionRow(newUrl);
+            } catch (error) {
+                UI.showWelcome('❌ Rename failed: ' + error.message);
+                cell.textContent = originalName;
             }
-            actionRow.classList.add("show");
-            cell.classList.add("active");
+        } else {
+            cell.textContent = originalName;
         }
     }
 
-    // Handle action button clicks and outside clicks
-    document.addEventListener("click", function(e) {
-        // Ignore clicks on URL links - they have their own handler
-        const urlLink = e.target.closest(".url-link");
-        if (urlLink) return;
-        
-        const actionBtn = e.target.closest(".action-btn");
-        const nameCell = e.target.closest(".name-cell");
-        const actionRow = e.target.closest(".action-row");
-
-        // If clicking outside of action rows and name cells, close all action rows
-        if (!nameCell && !actionRow) {
-            nameCells.forEach(cell => {
-                cell.classList.remove("active");
-                const row = cell.closest("tr").nextElementSibling;
-                if (row && row.classList.contains("action-row")) {
-                    row.classList.remove("show");
-                }
-            });
-        }
-
-        if (!actionBtn) return;
-        e.stopPropagation();
-        e.preventDefault();
-        const action = actionBtn.dataset.action;
-        const repoName = actionBtn.dataset.name;
-        const repoUrl = actionBtn.dataset.url;
-        if (action === "install") {
-            pendingInstall = { name: repoName, url: repoUrl };
-            modalRepoList.textContent = repoName;
-            modal.style.display = "flex";
-        } else if (action === "delete") {
-            pendingDelete = { name: repoName, url: repoUrl };
-            modalDeleteRepoList.textContent = repoName;
-            deleteModal.style.display = "flex";
-        } else if (action === "rename-local") {
-            const nameCell = document.querySelector(`.name-cell[data-repo="${repoName}"]`);
-            if (nameCell) {
-                makeCellEditable(nameCell, "/rename");
-            }
-        } else if (action === "rename-github") {
-            const nameCell = document.querySelector(`.name-cell[data-repo="${repoName}"]`);
-            if (nameCell) {
-                makeCellEditable(nameCell, "/rename-github");
-            }
-        } else if (action === "open") {
-            window.open(repoUrl, "_blank");
-        } else if (action === "settings") {
-            window.open(repoUrl, "_blank");
+    input.addEventListener('blur', saveValue);
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            input.blur();
+        } else if (e.key === 'Escape') {
+            cell.textContent = originalName;
         }
     });
+}
 
-    // Make cell editable and save on blur
-    function makeCellEditable(cell, endpoint = "/rename") {
-        const originalName = cell.dataset.repo;
-        const input = document.createElement("input");
-        input.type = "text";
-        input.value = originalName;
-        input.style.width = "90%";
-        input.style.padding = "4px";
-        input.style.background = "#404040";
-        input.style.color = "#e0e0e0";
-        input.style.border = "1px solid #4CAF50";
-        input.style.borderRadius = "4px";
-        input.style.fontSize = "inherit";
-        input.style.fontFamily = "inherit";
+function updateUrlWithName(url, oldName, newName) {
+    if (!url) return url;
 
-        cell.textContent = "";
-        cell.appendChild(input);
-        input.focus();
-        input.select();
-
-        async function saveValue() {
-            const newName = input.value.trim();
-            if (newName && newName !== originalName) {
-                try {
-                    const response = await fetch(endpoint, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ old_name: originalName, new_name: newName })
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        cell.textContent = newName;
-                        cell.dataset.repo = newName;
-                        // Update URL if it contains the old name
-                        const oldUrl = cell.dataset.url;
-                        if (oldUrl && oldUrl.includes(originalName)) {
-                            cell.dataset.url = oldUrl.replace(originalName, newName);
-                        }
-                        // Update action row buttons with new name
-                        const actionRow = cell.closest("tr").nextElementSibling;
-                        if (actionRow && actionRow.classList.contains("action-row")) {
-                            const actionBtns = actionRow.querySelectorAll(".action-btn");
-                            actionBtns.forEach(btn => {
-                                if (btn.dataset.name === originalName) {
-                                    btn.dataset.name = newName;
-                                }
-                            });
-                        }
-                        // Close action row
-                        const actionRow2 = cell.closest("tr").nextElementSibling;
-                        if (actionRow2 && actionRow2.classList.contains("action-row")) {
-                            actionRow2.classList.remove("show");
-                        }
-                        welcomeText.textContent = "✅ Renamed to " + newName;
-                    } else {
-                        welcomeText.textContent = "❌ Rename failed: " + data.error;
-                        cell.textContent = originalName;
-                    }
-                } catch (err) {
-                    welcomeText.textContent = "❌ Request failed: " + err.message;
-                    cell.textContent = originalName;
-                }
-            } else {
-                cell.textContent = originalName;
-            }
+    // Local path pattern
+    if (url.includes('NEW_PROJECTS') || url.includes('MY_REPOS') || url.startsWith('file://')) {
+        const pattern = new RegExp(`[/\\\\]${escapeRegExp(oldName)}$`);
+        if (pattern.test(url)) {
+            return url.replace(pattern, '/' + newName);
         }
+        return url;
+    }
 
-        input.addEventListener("blur", saveValue);
-        input.addEventListener("keydown", function(e) {
-            if (e.key === "Enter") {
-                input.blur();
-            } else if (e.key === "Escape") {
-                cell.textContent = originalName;
+    // GitHub URL pattern
+    const githubPattern = new RegExp(`[/\\\\]${escapeRegExp(oldName)}[/\\\\]?$`);
+    if (githubPattern.test(url)) {
+        return url.replace(githubPattern, '/' + newName);
+    }
+
+    return url;
+}
+
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function updateActionRowButtons(oldName, newName) {
+    const actionRow = document.querySelector(`tr[data-name="${CSS.escape(oldName)}"] + .action-row`);
+    if (actionRow) {
+        actionRow.querySelectorAll('.action-btn').forEach(btn => {
+            if (btn.dataset.name === oldName) {
+                btn.dataset.name = newName;
             }
         });
     }
+}
 
-    modalCancel.addEventListener("click", function() {
-        modal.style.display = "none";
-        pendingInstall = null;
-    });
-    modalConfirm.addEventListener("click", async function() {
-        if (!pendingInstall) return;
-        modal.style.display = "none";
-        welcomeText.textContent = "⏳ Installing " + pendingInstall.name + "...";
-        try {
-            const response = await fetch("/install", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ repos: [pendingInstall.url] })
-            });
-            const data = await response.json();
-            if (data.success) {
-                if (data.installed_count !== undefined && installedCountEl) {
-                    installedCountEl.textContent = "📁 Installed: " + data.installed_count;
-                }
-                welcomeText.textContent = "✅ Installed " + pendingInstall.name;
-                const nameCell = document.querySelector(`.name-cell[data-url="${pendingInstall.url}"]`);
-                if (nameCell) {
-                    nameCell.classList.remove("active");
-                    nameCell.closest("tr").classList.add("installed-row");
-                    const actionRow = nameCell.closest("tr").nextElementSibling;
-                    if (actionRow && actionRow.classList.contains("action-row")) {
-                        actionRow.classList.remove("show");
-                    }
-                }
-            } else {
-                welcomeText.textContent = "❌ Installation failed";
-            }
-        } catch (err) {
-            welcomeText.textContent = "❌ Request failed: " + err.message;
+function closeActionRow(repoUrl) {
+    const row = document.querySelector(`tr[data-url="${CSS.escape(repoUrl)}"]`);
+    if (row) {
+        row.classList.remove('active');
+        const actionRow = row.nextElementSibling;
+        if (actionRow && actionRow.classList.contains('action-row')) {
+            actionRow.remove();
         }
-        pendingInstall = null;
-    });
-    modal.addEventListener("click", function(e) {
-        if (e.target === modal) {
-            modal.style.display = "none";
-            pendingInstall = null;
-        }
-    });
+    }
+}
 
-    modalDeleteCancel.addEventListener("click", function() {
-        deleteModal.style.display = "none";
-        pendingDelete = null;
-    });
-    modalDeleteConfirm.addEventListener("click", async function() {
-        if (!pendingDelete) return;
-        deleteModal.style.display = "none";
-        welcomeText.textContent = "⏳ Deleting " + pendingDelete.name + "...";
-        try {
-            const response = await fetch("/delete", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ repos: [pendingDelete.name] })
-            });
-            const data = await response.json();
-            if (data.success) {
-                if (data.installed_count !== undefined && installedCountEl) {
-                    installedCountEl.textContent = "📁 Installed: " + data.installed_count;
-                }
-                welcomeText.textContent = "✅ Deleted " + pendingDelete.name;
-                const nameCell = document.querySelector(`.name-cell[data-url="${pendingDelete.url}"]`);
-                if (nameCell) {
-                    nameCell.classList.remove("active");
-                    const row = nameCell.closest("tr");
-                    row.classList.remove("installed-row", "new-project-row");
-                    // Remove the row for new projects, or just remove installed class for MY_REPOS
-                    if (pendingDelete.url.includes("NEW_PROJECTS")) {
-                        row.style.display = "none";
-                    }
-                    const actionRow = row.nextElementSibling;
-                    if (actionRow && actionRow.classList.contains("action-row")) {
-                        actionRow.classList.remove("show");
-                    }
-                }
-            } else {
-                welcomeText.textContent = "❌ Deletion failed";
-            }
-        } catch (err) {
-            welcomeText.textContent = "❌ Request failed: " + err.message;
-        }
-        pendingDelete = null;
-    });
-    deleteModal.addEventListener("click", function(e) {
-        if (e.target === deleteModal) {
-            deleteModal.style.display = "none";
-            pendingDelete = null;
-        }
-    });
+// ---- Sorting ----
 
-    welcomeText.addEventListener("click", function() {
-        welcomeText.textContent = "Добро пожаловать, Мастер";
-        welcomeText.className = "welcome-text";
-    });
+function applyInitialSort() {
+    // Sort by created_at descending by default
+    State.sortColumn = 'created_at';
+    State.sortDirection = -1;
+    State.sortBy('created_at');
+    UI.renderTable();
+    UI.updateSortIndicators(State.sortColumn, State.sortDirection);
+}
 
-    // Sorting functionality
-    document.querySelectorAll("th.sortable").forEach(th => {
-        th.addEventListener("click", function() {
-            const column = this.dataset.sort;
-            const table = this.closest("table");
-            const headerRow = table.querySelector("tr:first-child");
-            // Exclude action rows from sorting
-            const rows = Array.from(table.querySelectorAll("tr:not(:first-child):not(.action-row)"));
-            if (sortColumn === column) {
-                sortDirection = -sortDirection;
-            } else {
-                sortColumn = column;
-                sortDirection = 1;
-            }
-            document.querySelectorAll("th.sortable").forEach(h => h.classList.remove("sort-asc", "sort-desc"));
-            this.classList.add(sortDirection === 1 ? "sort-asc" : "sort-desc");
+// ---- Welcome Message from Session ----
 
-            // Get column index dynamically
-            const columnIndex = Array.from(headerRow.children).indexOf(this);
-
-            rows.sort((a, b) => {
-                const aVal = a.cells[columnIndex].textContent.trim();
-                const bVal = b.cells[columnIndex].textContent.trim();
-                if (aVal < bVal) return -1 * sortDirection;
-                if (aVal > bVal) return 1 * sortDirection;
-                return 0;
-            });
-            rows.forEach(row => table.appendChild(row));
-            table.insertBefore(headerRow, table.firstChild);
-        });
-    });
-});
+function checkWelcomeMessage() {
+    const message = sessionStorage.getItem('welcomeMessage');
+    if (message) {
+        UI.showWelcome(message);
+        sessionStorage.removeItem('welcomeMessage');
+    }
+}

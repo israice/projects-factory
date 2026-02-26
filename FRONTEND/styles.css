@@ -386,3 +386,21 @@ td:nth-child(4) {
     background: #404040;
 }
 
+/* Rename input styles */
+.rename-input {
+    width: 90%;
+    padding: 4px;
+    background: #404040;
+    color: #e0e0e0;
+    border: 1px solid #4CAF50;
+    border-radius: 4px;
+    font-size: inherit;
+    font-family: inherit;
+    outline: none;
+}
+
+.rename-input:focus {
+    border-color: #66BB6A;
+    box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+

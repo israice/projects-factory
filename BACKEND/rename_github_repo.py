@@ -139,82 +139,107 @@ def _git_remote_origin(folder_path: Path) -> Optional[str]:
     return None
 
 
-def _matches_repo_name_in_remote(remote_url: str, old_name: str) -> bool:
-    """Match original heuristic: remote ends with old_name or old_name + '.git'."""
-    return remote_url.endswith(old_name) or remote_url.endswith(old_name + ".git")
+def _matches_repo_name_in_remote(remote_url: str, repo_name: str) -> bool:
+    """Check if remote URL ends with the repo name (with or without .git)."""
+    return remote_url.endswith(repo_name) or remote_url.endswith(repo_name + ".git")
+
+
+def find_repo_folder(my_repos_dir: Path, owner: str, old_name: str, new_name: str) -> Optional[Path]:
+    """
+    Find the local folder for a repository using multiple search strategies.
+    
+    Search order:
+    1. Direct match: MY_REPOS/old_name
+    2. Already renamed: MY_REPOS/new_name (in case of partial rename)
+    3. Git remote scan: Find folder with matching origin URL
+    
+    Returns the found Path or None if not found.
+    """
+    if not my_repos_dir.exists():
+        return None
+
+    # Strategy 1: Direct folder name match (old name)
+    direct_path = my_repos_dir / old_name
+    if direct_path.exists() and (direct_path / ".git").exists():
+        print(f"Found folder by direct match: {direct_path.name}")
+        return direct_path
+
+    # Strategy 2: Check if already renamed to new name (recovery from partial rename)
+    new_path = my_repos_dir / new_name
+    if new_path.exists() and (new_path / ".git").exists():
+        print(f"Folder already renamed to: {new_path.name}")
+        return new_path
+
+    # Strategy 3: Scan all folders and match by git remote URL
+    print(f"Searching for folder by git remote URL...")
+    expected_url_pattern = f"github.com/{owner}/{old_name}"
+    
+    try:
+        for entry in my_repos_dir.iterdir():
+            if not entry.is_dir() or not (entry / ".git").exists():
+                continue
+
+            remote = _git_remote_origin(entry)
+            if remote and _matches_repo_name_in_remote(remote, old_name):
+                print(f"Found matching folder by remote URL: {entry.name}")
+                return entry
+    except Exception as e:
+        print(f"Error scanning folders: {e}")
+
+    return None
 
 
 def rename_local_folder(project_root: Path, owner: str, old_name: str, new_name: str) -> bool:
     """
     Rename the local folder in MY_REPOS.
-    - First try MY_REPOS/old_name
-    - Else scan all folders with .git and compare origin URL suffix (old_name / old_name.git)
-    - If found: rename folder to MY_REPOS/new_name
+    
+    Uses find_repo_folder() to locate the folder, then:
+    - Renames folder to MY_REPOS/new_name
     - Best-effort: update origin URL to https://github.com/{owner}/{new_name}.git
     """
     my_repos_dir = project_root / "MY_REPOS"
-    if not my_repos_dir.exists():
-        return True
-
-    found_path: Optional[Path] = None
-
-    direct_path = my_repos_dir / old_name
-    if direct_path.exists():
-        found_path = direct_path
-    else:
-        print(f"Searching for local folder matching repository '{old_name}'...")
-        try:
-            for entry in my_repos_dir.iterdir():
-                if not entry.is_dir():
-                    continue
-                if not (entry / ".git").exists():
-                    continue
-
-                remote = _git_remote_origin(entry)
-                if remote and _matches_repo_name_in_remote(remote, old_name):
-                    found_path = entry
-                    print(f"Found matching folder: {entry.name}")
-                    break
-        except Exception:
-            # Preserve original "best-effort" scanning behavior.
-            found_path = None
+    
+    found_path = find_repo_folder(my_repos_dir, owner, old_name, new_name)
 
     if not found_path:
         print(f"Info: No local folder found for repository '{old_name}'")
-        return True
+        return True  # Not a failure - folder may not exist locally
 
     new_path = my_repos_dir / new_name
 
-    try:
-        found_path.rename(new_path)
-        print(f"OK: Renamed local folder: {found_path.name} -> {new_name}")
-
-        # Best-effort update remote.
+    # Skip if already renamed
+    if found_path == new_path:
+        print(f"Folder already has the new name: {new_name}")
+    else:
         try:
-            subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(new_path),
-                    "remote",
-                    "set-url",
-                    "origin",
-                    f"https://github.com/{owner}/{new_name}.git",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                check=True,
-            )
-            print("OK: Updated git remote URL")
+            found_path.rename(new_path)
+            print(f"OK: Renamed local folder: {found_path.name} -> {new_name}")
         except Exception as e:
-            print(f"Warning: Could not update git remote: {e}")
+            print(f"Error renaming local folder: {e}")
+            return False
 
-        return True
-
+    # Best-effort update git remote URL
+    try:
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(new_path),
+                "remote",
+                "set-url",
+                "origin",
+                f"https://github.com/{owner}/{new_name}.git",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True,
+        )
+        print("OK: Updated git remote URL")
     except Exception as e:
-        print(f"Error renaming local folder: {e}")
-        return False
+        print(f"Warning: Could not update git remote: {e}")
+
+    return True
 
 
 def rename_repository(token: str, owner: str, old_name: str, new_name: str) -> bool:
