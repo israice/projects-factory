@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import argparse
+import io
 import re
 import subprocess
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -77,16 +79,16 @@ def summarize_changed_files(items: list[tuple[str, str]]) -> str:
 def infer_highlights(diff_text: str) -> list[str]:
     text = diff_text.lower()
     rules: list[tuple[str, str]] = [
-        ("open-folder-explorer", "open folder action"),
-        ("open-repository", "repository link action"),
-        ("action-btn", "bottom action buttons"),
-        ("/api/", "API updates"),
-        ("confirmdialog", "confirm flow"),
-        ("rename", "rename flow"),
-        ("push", "push flow"),
-        ("delete", "delete flow"),
-        ("rownum", "row behavior"),
-        ("version.md", "versioning"),
+        ("open-folder-explorer", "added project folder open action"),
+        ("open-repository", "added repository link button"),
+        ("action-btn", "updated action buttons"),
+        ("/api/", "updated backend logic"),
+        ("confirmdialog", "added confirmation dialog"),
+        ("rename", "added project rename action"),
+        ("push", "added Push button in project row panel"),
+        ("delete", "improved project delete flow"),
+        ("rownum", "updated project row behavior"),
+        ("version.md", "updated versioning"),
     ]
     highlights: list[str] = []
     for needle, phrase in rules:
@@ -95,6 +97,21 @@ def infer_highlights(diff_text: str) -> list[str]:
         if len(highlights) >= 3:
             break
     return highlights
+
+
+def scope_to_human(scope_text: str) -> str:
+    mapping = {
+        "frontend": "updated frontend",
+        "backend": "updated backend",
+        "tests": "updated tests",
+        "server": "updated server",
+        "ci": "updated CI",
+        "docs": "updated documentation",
+        "project": "updated project",
+    }
+    parts = [p.strip() for p in scope_text.split("+")]
+    human_parts = [mapping.get(part, "updated project") for part in parts if part]
+    return " and ".join(human_parts) if human_parts else "updated project"
 
 
 def build_human_summary(repo_root: Path) -> str:
@@ -111,8 +128,8 @@ def build_human_summary(repo_root: Path) -> str:
     highlights = infer_highlights(combined_diff)
 
     if highlights:
-        return f"update {scope_text}: {', '.join(highlights)}"
-    return f"update {scope_text}"
+        return "; ".join(highlights)
+    return scope_to_human(scope_text)
 
 
 def build_version_line(version_text: str, summary: str) -> str:
@@ -127,6 +144,17 @@ def append_line(version_file: Path, line: str) -> None:
         if needs_newline:
             f.write("\n")
         f.write(line + "\n")
+
+
+def print_safe(text: str) -> None:
+    try:
+        if isinstance(sys.stdout, io.TextIOWrapper):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        print(text)
+    except UnicodeEncodeError:
+        encoding = sys.stdout.encoding or "utf-8"
+        safe_text = text.encode(encoding, errors="replace").decode(encoding, errors="replace")
+        print(safe_text)
 
 
 def main() -> int:
@@ -145,7 +173,7 @@ def main() -> int:
 
     if not args.dry_run:
         append_line(version_file, line)
-    print(line)
+    print_safe(line)
     return 0
 
 
