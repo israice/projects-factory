@@ -231,9 +231,29 @@ def update_yaml_description(name, description):
         pass
 
 
+def remove_repo_from_yaml(name):
+    if not YAML_PATH.exists():
+        return
+    try:
+        import yaml
+        data = yaml.safe_load(YAML_PATH.read_text(encoding="utf-8")) or {}
+        repos = [r for r in (data.get("repositories", []) or [])
+                 if not (isinstance(r, dict) and r.get("name") == name)]
+        data["repositories"] = repos
+        YAML_PATH.write_text(yaml.safe_dump(data, allow_unicode=True,
+                                            sort_keys=False, default_flow_style=False), encoding="utf-8")
+    except:
+        pass
+
+
 @app.get("/")
 async def index():
     return FileResponse(str(FRONTEND_DIR / "index.html"))
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse(str(FRONTEND_DIR / "favicon.svg"), media_type="image/svg+xml")
 
 
 @app.get("/api/config")
@@ -338,6 +358,41 @@ async def rename_github(payload: dict, request: Request):
         result = run_script(BACKEND_DIR / "rename_github_repo.py", [old, new],
                            timeout=TIMEOUTS["rename"])
         return {"success": True, "old_name": old, "new_name": new, "output": result.stdout}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/api/delete-github")
+async def delete_github(payload: dict, request: Request):
+    require_write_access(request)
+    name = payload.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "Invalid repository name")
+    if not GITHUB_TOKEN:
+        raise HTTPException(500, "GITHUB_TOKEN is not configured")
+
+    try:
+        import requests
+        api_url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{name}"
+        headers = {
+            "Authorization": f"Bearer {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "projects-factory/github-delete",
+        }
+        r = requests.delete(api_url, headers=headers, timeout=30)
+        if r.status_code not in (204,):
+            detail = ""
+            try:
+                body = r.json()
+                detail = body.get("message", "")
+            except:
+                detail = r.text
+            raise HTTPException(500, f"GitHub API error {r.status_code}: {detail[:200]}")
+
+        remove_repo_from_yaml(name)
+        return {"success": True, "name": name}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(500, str(e))
 

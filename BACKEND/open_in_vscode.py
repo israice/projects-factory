@@ -33,21 +33,70 @@ def find_code_command() -> str | None:
             # Avoid selecting Cursor's shim if another code command is present first.
             if "cursor" not in found.lower():
                 return found
-
-    # 3) Fallback to Cursor only if VS Code is unavailable
-    cursor_candidates = [
-        Path(local_app_data) / "Programs" / "cursor" / "resources" / "app" / "codeBin" / "code.cmd",
-        Path(local_app_data) / "Programs" / "cursor" / "resources" / "app" / "codeBin" / "code",
-    ]
-    for candidate in cursor_candidates:
-        if candidate.exists():
-            return str(candidate)
-
-    for cmd in ("cursor.cmd", "cursor"):
-        found = shutil.which(cmd)
-        if found:
-            return found
     return None
+
+
+def vscode_version_ok(code_cmd: str | None) -> bool:
+    if not code_cmd:
+        return False
+    try:
+        r = subprocess.run(
+            [code_cmd, "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def install_vscode_windows() -> tuple[bool, str]:
+    winget = shutil.which("winget")
+    if not winget:
+        return False, "winget not found; cannot auto-install VS Code"
+    try:
+        r = subprocess.run(
+            [
+                winget,
+                "install",
+                "--id",
+                "Microsoft.VisualStudioCode",
+                "-e",
+                "--accept-package-agreements",
+                "--accept-source-agreements",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=900,
+        )
+        if r.returncode == 0:
+            return True, ""
+        detail = (r.stderr or r.stdout or "").strip()
+        return False, detail[:400]
+    except Exception as e:
+        return False, str(e)
+
+
+def ensure_vscode_command() -> tuple[str | None, str]:
+    cmd = find_code_command()
+    if vscode_version_ok(cmd):
+        return cmd, ""
+
+    if sys.platform != "win32":
+        return None, "VS Code is not installed or `code --version` failed"
+
+    ok, err = install_vscode_windows()
+    if not ok:
+        return None, f"Failed to install VS Code: {err or 'unknown error'}"
+
+    # VS Code was installed; verify CLI availability and executable health.
+    cmd = find_code_command()
+    if not vscode_version_ok(cmd):
+        return None, "VS Code installed, but `code --version` is still unavailable"
+    return cmd, ""
 
 
 def main(argv: list[str]) -> int:
@@ -60,9 +109,9 @@ def main(argv: list[str]) -> int:
         print("Target folder does not exist", file=sys.stderr)
         return 1
 
-    cmd = find_code_command()
+    cmd, err = ensure_vscode_command()
     if not cmd:
-        print("VS Code CLI was not found (code/cursor). Add it to PATH or install VS Code/Cursor.", file=sys.stderr)
+        print(err or "VS Code CLI is unavailable", file=sys.stderr)
         return 1
 
     try:

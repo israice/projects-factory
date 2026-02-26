@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub Projects Manager</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         *:hover { text-decoration: none !important; }
@@ -28,28 +29,25 @@
         /* Header */
         .header-wrapper { display: flex; position: sticky; top: 0; z-index: 100; background: #1e1e1e; }
         .navbar { flex: 1; display: flex; flex-direction: column; background: #2d2d2d; }
-        .nav-row { display: flex; gap: 10px; padding: 10px 20px; }
+        .nav-row { display: flex; gap: 10px; padding: 10px 20px; justify-content: center; }
         .nav-row a { color: #e0e0e0; text-decoration: none; padding: 8px 16px; background: #3d3d3d; border-radius: 4px; }
         .nav-row a:hover { background: #4d4d4d; }
-        .welcome-row { padding: 10px 20px; }
+        .welcome-row { padding: 0 20px 10px; display: flex; justify-content: center; }
         .welcome-text { color: #0f0; font-weight: 700; font-family: 'Courier New', monospace; cursor: pointer; }
         
         /* Avatar */
-        .logo-wrapper { background: #2d2d2d; padding: 10px 20px; }
-        .avatar-container { position: relative; cursor: pointer; width: 50px; height: 50px; }
-        .avatar-img { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #4CAF50; }
-        .avatar-placeholder { width: 50px; height: 50px; border-radius: 50%; border: 2px solid #4CAF50; 
-                               display: flex; align-items: center; justify-content: center; font-size: 28px; }
-        .avatar-menu { display: none; position: absolute; right: 0; top: 55px; background: #3d3d3d; 
-                       border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); min-width: 150px; }
-        .avatar-menu a { display: block; padding: 10px 16px; color: #e0e0e0; text-decoration: none; }
-        .avatar-menu a:hover { background: #4d4d4d; }
+        .avatar-container { position: relative; width: 42px; height: 42px; flex: 0 0 42px; order: -1; }
+        .avatar-img { width: 42px; height: 42px; border-radius: 50%; border: 2px solid #4CAF50; }
+        .avatar-placeholder { width: 42px; height: 42px; border-radius: 50%; border: 2px solid #4CAF50; 
+                               display: flex; align-items: center; justify-content: center; font-size: 23px; }
         
         /* Table */
         .table-container { padding: 0 20px 20px; overflow-x: auto; }
-        .table-tools { padding: 0 20px 0; display: flex; justify-content: center; }
+        .search-row { padding: 0 20px 0; display: flex; align-items: center; gap: 12px; width: 100%; }
+        .user-inline { color: #e0e0e0; white-space: nowrap; font-weight: 600; }
         .table-search {
-            width: min(460px, 100%);
+            flex: 1 1 auto;
+            width: 100%;
             padding: 10px 12px;
             border: 1px solid #4d4d4d;
             border-radius: 6px;
@@ -113,6 +111,8 @@
         .action-btn:hover { background: #45a049; }
         .action-btn[data-action="delete"] { background: #dc3545; }
         .action-btn[data-action="delete"]:hover { background: #c82333; }
+        .action-btn[data-action="delete-github"] { background: #b71c1c; }
+        .action-btn[data-action="delete-github"]:hover { background: #9a1818; }
         .rename-input { width: 90%; padding: 6px; background: #404040; color: #e0e0e0; 
                         border: 1px solid #4CAF50; border-radius: 4px; font-size: inherit; }
         
@@ -126,36 +126,32 @@
     <div class="header-wrapper">
         <div class="navbar">
             <div class="nav-row">
-                <a href="#" id="nav-username">👨 User: -</a>
                 <a href="#" id="nav-repos">📦 Repos: 0</a>
-                <a href="#" id="nav-installed">📁 Installed: 0</a>
-                <a href="#" id="nav-local-only">🗂️ Local only: 0</a>
-                <a href="#" id="nav-last-url">🚀 Last URL: -</a>
+                <a href="#" id="nav-installed">📁 Downloaded: 0</a>
+                <a href="#" id="nav-local-only">🗂️ New Projects: 0</a>
+                <a href="#" id="nav-last-url">🚀 Next: -</a>
+                <a href="#" id="btn-create-new">➕ Create New</a>
+            </div>
+            <div class="search-row">
+                <div class="avatar-container" id="avatar-container">
+                    <div class="avatar-placeholder" id="avatar-placeholder">📦</div>
+                    <img class="avatar-img" id="avatar-img" style="display:none">
+                </div>
+                <span class="user-inline" id="nav-username">-</span>
+                <input
+                    id="table-search"
+                    class="table-search"
+                    type="text"
+                    placeholder="Search by Name, Description, URL, date..."
+                    autocomplete="off"
+                >
             </div>
             <div class="welcome-row">
-                <span class="welcome-text" id="welcome-text">Добро пожаловать, Мастер</span>
-            </div>
-        </div>
-        <div class="logo-wrapper">
-            <div class="avatar-container" id="avatar-container">
-                <div class="avatar-placeholder" id="avatar-placeholder">📦</div>
-                <img class="avatar-img" id="avatar-img" style="display:none">
-                <div class="avatar-menu" id="avatar-menu">
-                    <a href="#" id="btn-create-new">➕ Create New</a>
-                </div>
+                <span class="welcome-text" id="welcome-text"></span>
             </div>
         </div>
     </div>
 
-    <div class="table-tools">
-        <input
-            id="table-search"
-            class="table-search"
-            type="text"
-            placeholder="Search by Name, Description, URL, date..."
-            autocomplete="off"
-        >
-    </div>
     <div class="table-container">
         <table id="repos-table">
             <colgroup>
@@ -261,6 +257,19 @@
                 if (repo.is_new_project) return false;
                 const url = normalizeRepoUrl(repo.url);
                 return this.installedUrls.has(url);
+            },
+
+            getLaunchableRepos() {
+                return [...this.repos]
+                    .filter(r => Number(r.__rowNo) > 0)
+                    .sort((a, b) => Number(a.__rowNo) - Number(b.__rowNo));
+            },
+
+            getNextLaunchRepo() {
+                const launchable = this.getLaunchableRepos();
+                if (!launchable.length) return null;
+                const last = Number(this.lastLaunchedRowNo || 0);
+                return launchable.find(r => Number(r.__rowNo) > last) || launchable[0];
             }
         };
 
@@ -284,6 +293,7 @@
             post: (endpoint, body) => API.request(endpoint, { method: 'POST', body: JSON.stringify(body) }),
             installRepos: (urls) => API.post('/api/install', { repos: urls }),
             deleteRepos: (names) => API.post('/api/delete', { repos: names }),
+            deleteGithubRepo: (name) => API.post('/api/delete-github', { name }),
             renameLocal: (old, new_) => API.post('/api/rename', { old_name: old, new_name: new_ }),
             renameGithub: (old, new_) => API.post('/api/rename-github', { old_name: old, new_name: new_ }),
             updateDescription: (name, description) => API.post('/api/update-description', { name, description }),
@@ -296,6 +306,7 @@
             el: {},
             sortKey: 'created_at',
             sortDir: 'desc',
+            welcomeTimer: null,
             init() {
                 this.el = {
                     username: document.getElementById('nav-username'),
@@ -307,7 +318,6 @@
                     avatarContainer: document.getElementById('avatar-container'),
                     avatarImg: document.getElementById('avatar-img'),
                     avatarPlaceholder: document.getElementById('avatar-placeholder'),
-                    avatarMenu: document.getElementById('avatar-menu'),
                     search: document.getElementById('table-search'),
                     tbody: document.getElementById('repos-tbody'),
                     headers: Array.from(document.querySelectorAll('#repos-table thead th[data-sort]'))
@@ -384,11 +394,12 @@
                 });
             },
             updateHeader() {
-                this.el.username.textContent = `👨 User: ${State.username}`;
+                this.el.username.textContent = State.username || '-';
                 this.el.repos.textContent = `📦 Repos: ${State.count}`;
-                this.el.installed.textContent = `📁 Installed: ${State.installedCount}`;
-                this.el.localOnly.textContent = `🗂️ Local only: ${State.localOnlyCount}`;
-                this.el.lastUrl.textContent = `🚀 Last URL: ${State.lastLaunchedRowNo ? '#' + State.lastLaunchedRowNo : '-'}`;
+                this.el.installed.textContent = `📁 Downloaded: ${State.installedCount}`;
+                this.el.localOnly.textContent = `🗂️ New Projects: ${State.localOnlyCount}`;
+                const nextRepo = State.getNextLaunchRepo();
+                this.el.lastUrl.textContent = `🚀 Next: ${nextRepo ? Number(nextRepo.__rowNo) : '-'}`;
                 if (State.avatarUrl) {
                     this.el.avatarImg.src = State.avatarUrl;
                     this.el.avatarImg.style.display = 'block';
@@ -398,7 +409,16 @@
                     this.el.avatarPlaceholder.style.display = 'flex';
                 }
             },
-            showWelcome(msg) { this.el.welcome.textContent = msg; },
+            showWelcome(msg) {
+                this.el.welcome.textContent = msg || '';
+                if (this.welcomeTimer) clearTimeout(this.welcomeTimer);
+                if (msg) {
+                    this.welcomeTimer = setTimeout(() => {
+                        this.el.welcome.textContent = '';
+                        this.welcomeTimer = null;
+                    }, 5000);
+                }
+            },
             markLastUrlLaunch(rowNo) {
                 State.lastLaunchedRowNo = rowNo || null;
                 if (State.lastLaunchedRowNo) localStorage.setItem(LAST_URL_ROW_KEY, String(State.lastLaunchedRowNo));
@@ -448,11 +468,12 @@
                     let buttons = '';
                     if (isNew) {
                         buttons = `
-                            <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Delete</button>
+                            <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Local Delete</button>
                         `;
                     } else if (installed) {
                         buttons = `
-                            <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Delete</button>
+                            <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Local Delete</button>
+                            <button class="action-btn" data-action="delete-github" data-name="${this.escape(name)}" data-url="${this.escape(url)}">☁️ Delete from GitHub</button>
                         `;
                     } else {
                         buttons = `
@@ -542,6 +563,63 @@
                 // Close action row after deletion
                 closeActionRow(repo.url);
             } catch (e) { UI.showWelcome('❌ Delete failed: ' + e.message); }
+        }
+
+        async function handleDeleteGithubConfirm(repo) {
+            UI.showWelcome('⏳ Deleting from GitHub ' + repo.name + '...');
+            try {
+                await API.deleteGithubRepo(repo.name);
+                State.repos = State.repos.filter(r => !(r.name === repo.name && r.url === repo.url));
+                State.count = State.repos.filter(r => !r.is_new_project).length;
+                State.localOnlyCount = State.repos.filter(r => r.is_new_project).length;
+                UI.updateHeader();
+                UI.renderTable();
+                UI.showWelcome('✅ Deleted from GitHub ' + repo.name);
+                closeActionRow(repo.url);
+            } catch (e) {
+                UI.showWelcome('❌ GitHub delete failed: ' + e.message);
+            }
+        }
+
+        async function launchRepoFromUrlAction(repo, rowNo, isLocal) {
+            if (!repo || !repo.url) return;
+            if (isLocal) {
+                try {
+                    await API.openFolder(repo.url);
+                    UI.markLastUrlLaunch(rowNo);
+                    UI.showWelcome('✅ Opened in VS Code');
+                } catch (err) {
+                    UI.showWelcome('❌ Open failed: ' + err.message);
+                }
+                return;
+            }
+
+            const isInstalled = State.isInstalled(repo);
+            if (!isInstalled) {
+                const ok = await handleInstallConfirm(repo);
+                if (!ok) return;
+            }
+            try {
+                await API.openFolder(repo.name || repo.url);
+                UI.markLastUrlLaunch(rowNo);
+                UI.showWelcome('✅ Opened in VS Code');
+            } catch (err) {
+                UI.showWelcome('❌ Open failed: ' + err.message);
+            }
+        }
+
+        async function launchNextFromLastOpened() {
+            const next = State.getNextLaunchRepo();
+            if (!next) {
+                UI.showWelcome('❌ No projects available');
+                return;
+            }
+
+            await launchRepoFromUrlAction(
+                { name: next.name, url: next.url },
+                Number(next.__rowNo),
+                !!next.is_new_project
+            );
         }
 
         function makeEditable(cell, name, url, endpoint) {
@@ -671,27 +749,21 @@
             try {
                 await refreshDataAndView(false);
                 finishBootstrap();
+                UI.showWelcome(UI.el.welcome.textContent || '');
             } catch (e) {
                 finishBootstrap('Failed to load data');
                 UI.showWelcome('❌ Init failed: ' + e.message);
                 return;
             }
 
-            // Avatar menu
-            UI.el.avatarContainer.addEventListener('click', (e) => {
-                e.stopPropagation();
-                UI.el.avatarMenu.style.display = UI.el.avatarMenu.style.display === 'flex' ? 'none' : 'flex';
-            });
-            document.addEventListener('click', (e) => {
-                if (!UI.el.avatarContainer.contains(e.target)) UI.el.avatarMenu.style.display = 'none';
-            });
-
             document.getElementById('btn-create-new').addEventListener('click', async (e) => {
                 e.preventDefault();
-                UI.el.avatarMenu.style.display = 'none';
                 await handleCreateProject();
-                // Ensure menu stays closed
-                UI.el.avatarMenu.style.display = 'none';
+            });
+
+            UI.el.lastUrl.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await launchNextFromLastOpened();
             });
 
             UI.el.welcome.addEventListener('click', () => UI.showWelcome('Добро пожаловать, Мастер'));
@@ -733,36 +805,13 @@
                 const link = e.target.closest('.url-link');
                 if (link) {
                     e.preventDefault();
-                    if (link.dataset.isLocal === 'true') {
-                        try {
-                            await API.openFolder(link.dataset.url);
-                            const row = link.closest('tr');
-                            const rowNo = row ? Number(row.querySelector('.rownum-cell')?.textContent || 0) : 0;
-                            UI.markLastUrlLaunch(rowNo);
-                            UI.showWelcome('✅ Opened in VS Code');
-                        } catch (err) {
-                            UI.showWelcome('❌ Open failed: ' + err.message);
-                        }
-                    } else {
-                        const row = link.closest('tr');
-                        const repo = {
-                            name: row ? row.dataset.name : '',
-                            url: link.dataset.url
-                        };
-                        const isInstalled = row && row.dataset.installed === 'true';
-                        if (!isInstalled) {
-                            const ok = await handleInstallConfirm(repo);
-                            if (!ok) return;
-                        }
-                        try {
-                            await API.openFolder(repo.name || repo.url);
-                            const rowNo = row ? Number(row.querySelector('.rownum-cell')?.textContent || 0) : 0;
-                            UI.markLastUrlLaunch(rowNo);
-                            UI.showWelcome('✅ Opened in VS Code');
-                        } catch (err) {
-                            UI.showWelcome('❌ Open failed: ' + err.message);
-                        }
-                    }
+                    const row = link.closest('tr');
+                    const repo = {
+                        name: row ? row.dataset.name : '',
+                        url: link.dataset.url
+                    };
+                    const rowNo = row ? Number(row.querySelector('.rownum-cell')?.textContent || 0) : 0;
+                    await launchRepoFromUrlAction(repo, rowNo, link.dataset.isLocal === 'true');
                 }
             });
 
@@ -777,6 +826,9 @@
                     }
                     else if (action === 'delete') {
                         if (confirm(`Delete "${repoName}"?`)) handleDeleteConfirm(repo);
+                    }
+                    else if (action === 'delete-github') {
+                        if (confirm(`Delete "${repoName}" from GitHub?`)) handleDeleteGithubConfirm(repo);
                     }
                 }
             });
