@@ -2,3 +2,6 @@ MY_REPOS/
 NEW_PROJECTS/
 
 .env
+
+.ruff_cache
+__pycache__/

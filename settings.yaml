@@ -1,1 +1,10 @@
 base_directory: NEW_PROJECTS
+
+# Timeout settings (in seconds)
+timeouts:
+  refresh: 120
+  create_project: 120
+  install_per_repo: 300
+  delete_per_repo: 60
+  rename: 60
+  git_remote: 5

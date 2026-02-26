@@ -32,10 +32,10 @@ pip install -r requirements.txt
 ### 1. Получение списка репозиториев
 
 ```bash
-python TOOLS/get_all_github_projects.py
+python BACKEND/get_all_github_projects.py
 ```
 
-Результат сохраняется в `TOOLS/get_all_github_projects.yaml`.
+Результат сохраняется в `BACKEND/get_all_github_projects.yaml`.
 
 ### 2. Веб-интерфейс
 
@@ -55,9 +55,12 @@ python run.py
 ## Структура проекта
 
 ```
-├── TOOLS/
+├── BACKEND/
 │   ├── get_all_github_projects.py  # Скрипт fetch репозиториев
-│   └── get_all_github_projects.yaml # Результат
+│   ├── get_all_github_projects.yaml # Результат
+│   ├── install_existing_repo.py    # Установка репозиториев
+│   ├── delete_local_folder.py      # Удаление локальных папок
+│   └── rename_github_repo.py       # Переименование репозиториев
 ├── FRONTEND/
 │   └── index.html                   # Шаблон веб-интерфейса
 ├── run.py                           # Flask приложение

@@ -1,4 +1,20 @@
 
+Если хотите убедиться что всё работает:
+
+# 1. Запустите сервер
+python run.py
+
+# 2. В другом терминале проверьте порты
+netstat -ano | findstr 5999
+netstat -ano | findstr 35729
+# (должны показать LISTENING)
+ 
+# 3. Вернитесь в первый терминал, нажмите Ctrl+C
+ 
+# 4. Снова проверьте
+netstat -ano | findstr 5999
+netstat -ano | findstr 35729
+    
 # RECOVERY
 git log --oneline -n 5
 
@@ -11,7 +27,7 @@ python run.py
 
 # UPDATE
 git add .
-git commit -m "v0.0.10 - added rename local project button"
+git commit -m "v0.0.11 - added avatar based menu"
 git push
 python run.py
 
@@ -26,3 +42,4 @@ v0.0.7 - added dark theme
 v0.0.8 - added create new project button
 v0.0.9 - added delete yellow project button
 v0.0.10 - added rename local project button
+v0.0.11 - added avatar based menu
