@@ -479,7 +479,7 @@
             get: (endpoint) => API.request(endpoint, { method: 'GET' }),
             post: (endpoint, body) => API.request(endpoint, { method: 'POST', body: JSON.stringify(body) }),
             installRepos: (urls) => API.post('/api/install', { repos: urls }),
-            pushRepo: (path, message) => API.post('/api/push', { path, message }),
+            pushRepo: (path, message, versionMode = 'use_existing') => API.post('/api/push', { path, message, version_mode: versionMode }),
             addToGithub: (name, description, visibility = 'public') => API.post('/api/add-to-github', { name, description, visibility }),
             deleteRepos: (names) => API.post('/api/delete', { repos: names }),
             deleteGithubRepo: (name) => API.post('/api/delete-github', { name }),
@@ -661,6 +661,12 @@
                     actionRow.className = 'action-row show';
                     let buttons = '';
                     if (isNew) {
+                        const pushMode = canPush
+                            ? `<select class="action-visibility action-push-mode" data-action="push-mode">
+                                <option value="use_existing" selected>Use Existing</option>
+                                <option value="generate_version">Generate Version</option>
+                            </select>`
+                            : '';
                         const pushBtn = canPush
                             ? `<button class="action-btn" data-action="push" data-name="${this.escape(name)}" data-url="${this.escape(url)}">⬆️ Push</button>`
                             : '';
@@ -670,6 +676,7 @@
                         buttons = `
                             <button class="action-btn" data-action="open-folder" data-name="${this.escape(name)}" data-url="${this.escape(url)}">📂 Folder</button>
                             ${repoBtn}
+                            ${pushMode}
                             ${pushBtn}
                             <select class="action-visibility" data-action="visibility">
                                 <option value="public" selected>Public</option>
@@ -679,6 +686,12 @@
                             <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Local Delete</button>
                         `;
                     } else if (installed) {
+                        const pushMode = canPush
+                            ? `<select class="action-visibility action-push-mode" data-action="push-mode">
+                                <option value="use_existing" selected>Use Existing</option>
+                                <option value="generate_version">Generate Version</option>
+                            </select>`
+                            : '';
                         const pushBtn = canPush
                             ? `<button class="action-btn" data-action="push" data-name="${this.escape(name)}" data-url="${this.escape(url)}">⬆️ Push</button>`
                             : '';
@@ -688,6 +701,7 @@
                         buttons = `
                             <button class="action-btn" data-action="open-folder" data-name="${this.escape(name)}" data-url="${this.escape(url)}">📂 Folder</button>
                             ${repoBtn}
+                            ${pushMode}
                             ${pushBtn}
                             <button class="action-btn" data-action="delete" data-name="${this.escape(name)}" data-url="${this.escape(url)}">🗑️ Local Delete</button>
                             <button class="action-btn" data-action="delete-github" data-name="${this.escape(name)}" data-url="${this.escape(url)}">☁️ Delete Repository</button>
@@ -812,12 +826,12 @@
             }
         }
 
-        async function handlePushConfirm(repo) {
+        async function handlePushConfirm(repo, versionMode = 'use_existing') {
             closeActionRow(repo.url);
             setRepoCanPush(repo, false);
             UI.showWelcome('⏳ Updating VERSION.md and pushing ' + repo.name + '...');
             try {
-                await API.pushRepo(repo.url, '');
+                await API.pushRepo(repo.url, '', versionMode);
                 UI.showWelcome('✅ Push completed for ' + repo.name);
             } catch (e) {
                 setRepoCanPush(repo, true);
@@ -1099,7 +1113,10 @@
                         await handleAddToGithubConfirm(repo, vis);
                     }
                     else if (action === 'push') {
-                        await handlePushConfirm(repo);
+                        const actionCell = btn.closest('.action-cell');
+                        const pushModeSelect = actionCell ? actionCell.querySelector('.action-push-mode') : null;
+                        const pushMode = pushModeSelect ? String(pushModeSelect.value || 'use_existing') : 'use_existing';
+                        await handlePushConfirm(repo, pushMode);
                     }
                     else if (action === 'open-folder') {
                         try {

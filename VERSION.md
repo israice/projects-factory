@@ -54,3 +54,5 @@ v0.0.19 - added project folder open action; added repository link button; update
 v0.0.20 - added project folder open action; added repository link button; updated action buttons
 v0.0.21 - added Push button in project row panel; updated versioning
 v0.0.22 - updated action buttons; added Push button in project row panel; improved project delete flow
+v0.0.23 - testing new logic in version savings
+v0.0.24 - updated action buttons; updated backend logic; added Push button in project row panel

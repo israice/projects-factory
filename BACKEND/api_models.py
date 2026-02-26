@@ -36,3 +36,4 @@ class OpenFolderPayload(BaseModel):
 class PushPayload(BaseModel):
     path: str
     message: str = ""
+    version_mode: str = "use_existing"

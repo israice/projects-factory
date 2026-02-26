@@ -225,6 +225,21 @@ def is_non_fast_forward_error(message: str) -> bool:
     return any(marker in text for marker in markers)
 
 
+def get_last_version_line(repo_root: Path) -> str:
+    version_file = repo_root / "VERSION.md"
+    if not version_file.exists():
+        return ""
+    try:
+        lines = version_file.read_text(encoding="utf-8", errors="replace").splitlines()
+    except Exception:
+        return ""
+    for line in reversed(lines):
+        text = line.strip()
+        if text:
+            return text
+    return ""
+
+
 def ensure_create_project_script():
     script = MY_REPOS_DIR / "Create-Project-Folder" / "create_new_project.py"
     if script.exists():
@@ -906,13 +921,23 @@ async def push_repo(payload: PushPayload, request: Request):
         raise HTTPException(400, "Target folder is not a git repository")
 
     try:
-        version_result = run_script(
-            BACKEND_DIR / "create_new_version.py",
-            [str(resolved)],
-            timeout=30,
-        )
-        output_lines = [line.strip() for line in (version_result.stdout or "").splitlines() if line.strip()]
-        commit_message = output_lines[-1] if output_lines else (payload.message.strip() or DEFAULT_PUSH_MESSAGE)
+        version_mode = str(getattr(payload, "version_mode", "use_existing") or "use_existing").strip().lower()
+        if version_mode not in ("use_existing", "generate_version"):
+            raise HTTPException(400, "Invalid version_mode")
+
+        if version_mode == "generate_version":
+            version_result = run_script(
+                BACKEND_DIR / "create_new_version.py",
+                [str(resolved)],
+                timeout=30,
+            )
+            output_lines = [line.strip() for line in (version_result.stdout or "").splitlines() if line.strip()]
+            commit_message = output_lines[-1] if output_lines else (payload.message.strip() or DEFAULT_PUSH_MESSAGE)
+        else:
+            commit_message = get_last_version_line(resolved)
+            if not commit_message:
+                raise HTTPException(400, "VERSION.md has no version lines. Select 'Generate Version' and try again.")
+
         run_command(["git", "add", "."], cwd=resolved, timeout=TIMEOUTS["git_push"])
         try:
             run_command(["git", "commit", "-m", commit_message], cwd=resolved, timeout=TIMEOUTS["git_push"])
