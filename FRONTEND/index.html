@@ -72,8 +72,19 @@
         .new-project-row { background: #3a2a1a; }
         
         /* Cells */
-        .logo-cell { text-align: center; width: 60px; cursor: pointer; }
+        .logo-cell { position: relative; text-align: center; width: 60px; cursor: pointer; }
         .logo-cell.active { background: #2a4a2a; }
+        .logo-cell.has-unpushed::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #b455ff;
+            box-shadow: 0 0 6px rgba(180, 85, 255, 0.7);
+        }
         .logo-icon { font-size: 32px; }
         .name-cell { cursor: pointer; color: #4CAF50; font-weight: 600; overflow-wrap: anywhere; word-break: break-word; }
         .name-cell:hover { text-decoration: underline; }
@@ -233,6 +244,7 @@
         const LAST_URL_ROW_KEY = 'projectsFactory:lastUrlRowNo';
         const LOCAL_DESC_KEY = 'projectsFactory:localDescriptions';
         const DEFAULT_PUSH_MESSAGE = '';
+        const PUSH_STATE_POLL_MS = 10000;
 
         function readLocalDescriptions() {
             try {
@@ -337,6 +349,16 @@
             UI.renderTable();
         }
 
+        let pushStatePollTimer = null;
+        function startPushStatePolling() {
+            if (pushStatePollTimer) clearInterval(pushStatePollTimer);
+            pushStatePollTimer = setInterval(async () => {
+                if (document.hidden) return;
+                const changed = await State.refreshPushStates();
+                if (changed) UI.renderTable();
+            }, PUSH_STATE_POLL_MS);
+        }
+
         function formatCreated(value = '') {
             if (!value) return '-';
             const [datePart, timePart = ''] = String(value).split('T');
@@ -395,6 +417,27 @@
                 );
                 const savedRowNo = Number(localStorage.getItem(LAST_URL_ROW_KEY) || 0);
                 this.lastLaunchedRowNo = savedRowNo > 0 ? savedRowNo : null;
+            },
+            async refreshPushStates() {
+                let data;
+                try {
+                    data = await API.get('/api/push-states');
+                } catch {
+                    return false;
+                }
+                const items = Array.isArray(data?.items) ? data.items : [];
+                const nextMap = new Map(items.map(item => [`${item.name}|${item.url}`, !!item.can_push]));
+                let changed = false;
+                this.repos.forEach(repo => {
+                    const key = `${repo.name}|${repo.url}`;
+                    if (!nextMap.has(key)) return;
+                    const nextCanPush = !!nextMap.get(key);
+                    if (!!repo.can_push !== nextCanPush) {
+                        repo.can_push = nextCanPush;
+                        changed = true;
+                    }
+                });
+                return changed;
             },
 
             isInstalled(repo) {
@@ -578,6 +621,7 @@
                     const installed = State.isInstalled(repo);
                     const isNew = repo.is_new_project;
                     const rowClass = isNew ? 'new-project-row' : installed ? 'installed-row' : '';
+                    const logoClass = repo.can_push ? 'logo-cell has-unpushed' : 'logo-cell';
                     const logo = isNew ? '📁' : (repo.private ? '🔒' : '🌍');
                     const created = formatCreated(repo.created_at);
                     const tr = document.createElement('tr');
@@ -589,7 +633,7 @@
                     tr.dataset.canPush = repo.can_push ? 'true' : 'false';
                     tr.innerHTML = `
                         <td class="rownum-cell">${repo.__rowNo || ''}</td>
-                        <td class="logo-cell" data-repo="${this.escape(repo.name)}" data-url="${this.escape(repo.url)}"><span class="logo-icon">📦</span></td>
+                        <td class="${logoClass}" data-repo="${this.escape(repo.name)}" data-url="${this.escape(repo.url)}"><span class="logo-icon">📦</span></td>
                         <td class="name-cell" data-repo="${this.escape(repo.name)}" data-url="${this.escape(repo.url)}">${this.escape(repo.name)}</td>
                         <td class="description-cell" data-repo="${this.escape(repo.name)}" data-url="${this.escape(repo.url)}">${this.escape(repo.description || '')}</td>
                         <td class="url-cell">
@@ -963,6 +1007,7 @@
             UI.init();
             try {
                 await refreshDataAndView(false);
+                startPushStatePolling();
                 finishBootstrap();
                 UI.showWelcome(UI.el.welcome.textContent || '');
             } catch (e) {

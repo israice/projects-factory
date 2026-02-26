@@ -285,9 +285,9 @@ def normalize_repo_url(url: str):
     return str(url or "").strip().rstrip("/").removesuffix(".git").lower()
 
 
-def get_local_git_states():
+def get_local_git_states(force_refresh=False):
     now = time.time()
-    if GIT_STATE_CACHE["expires_at"] > now:
+    if (not force_refresh) and GIT_STATE_CACHE["expires_at"] > now:
         return GIT_STATE_CACHE["by_path"], GIT_STATE_CACHE["by_remote"]
 
     states_by_path = {}
@@ -573,6 +573,45 @@ async def repos():
         enriched_new.append(enriched)
 
     return {"repos": enriched_github + enriched_new, "count": len(sorted_repos)}
+
+
+@app.get("/api/push-states")
+async def push_states():
+    yaml_repos = load_yaml_repos()
+    sorted_repos = sorted(yaml_repos, key=lambda r: (r.get("name") != GITHUB_USERNAME,
+                                                      str(r.get("name", "")).lower()))
+    states_by_path, states_by_remote = get_local_git_states(force_refresh=True)
+
+    items = []
+
+    for repo in sorted_repos:
+        name = str(repo.get("name", "")).strip()
+        url = str(repo.get("url", "")).strip()
+        can_push = False
+        if name:
+            preferred_local = BASE_DIR if BASE_DIR.name == name else (MY_REPOS_DIR / name)
+            local_state = states_by_path.get(str(preferred_local.resolve()))
+            if local_state:
+                can_push = bool(local_state.get("can_push"))
+        if not can_push:
+            remote_state = states_by_remote.get(normalize_repo_url(url))
+            if remote_state:
+                can_push = bool(remote_state.get("can_push"))
+        items.append({"name": name, "url": url, "can_push": can_push})
+
+    for repo in get_new_projects(states_by_path):
+        url = str(repo.get("url", "")).strip()
+        can_push = False
+        if url:
+            try:
+                local_state = states_by_path.get(str(Path(url).resolve()))
+                if local_state:
+                    can_push = bool(local_state.get("can_push"))
+            except Exception as exc:
+                logger.debug("Cannot resolve local path for push state: %s", exc)
+        items.append({"name": str(repo.get("name", "")).strip(), "url": url, "can_push": can_push})
+
+    return {"items": items}
 
 
 @app.post("/api/refresh")

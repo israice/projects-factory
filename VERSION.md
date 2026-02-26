@@ -49,3 +49,4 @@ v0.0.14 - added Next button
 v0.0.15 - added Delete project from github
 v0.0.16 - added confirm module
 v0.0.17 - update backend + docs: open folder action, repository link action, bottom action buttons
+v0.0.18 - update frontend + server: API updates, push flow, row behavior
