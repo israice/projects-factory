@@ -116,6 +116,46 @@
         .action-btn[data-action="delete-github"]:hover { background: #9a1818; }
         .rename-input { width: 90%; padding: 6px; background: #404040; color: #e0e0e0; 
                         border: 1px solid #4CAF50; border-radius: 4px; font-size: inherit; }
+
+        /* Confirm Modal */
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            pointer-events: auto;
+        }
+        .confirm-overlay[hidden] { display: none !important; }
+        .confirm-modal {
+            width: min(520px, calc(100vw - 32px));
+            background: #2d2d2d;
+            border: 1px solid #4d4d4d;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+            pointer-events: auto;
+        }
+        .confirm-title { font-weight: 700; margin-bottom: 10px; color: #e0e0e0; }
+        .confirm-message { color: #d0d0d0; margin-bottom: 14px; overflow-wrap: anywhere; }
+        .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .confirm-btn {
+            border: 1px solid #4d4d4d;
+            background: #3a3a3a;
+            color: #e0e0e0;
+            border-radius: 6px;
+            padding: 8px 14px;
+            cursor: pointer;
+        }
+        .confirm-btn:hover { background: #464646; }
+        .confirm-btn.confirm-danger {
+            border-color: #b71c1c;
+            background: #b71c1c;
+            color: #fff;
+        }
+        .confirm-btn.confirm-danger:hover { background: #9a1818; }
         
         /* Loading */
         .loading { opacity: 0.6; pointer-events: none; }
@@ -123,6 +163,16 @@
 </head>
 <body>
     <div id="boot-loader">Loading projects...</div>
+    <div id="confirm-overlay" class="confirm-overlay" hidden>
+        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+            <div class="confirm-title" id="confirm-title">Confirm Action</div>
+            <div class="confirm-message" id="confirm-message"></div>
+            <div class="confirm-actions">
+                <button class="confirm-btn" id="confirm-cancel" type="button">Cancel</button>
+                <button class="confirm-btn confirm-danger" id="confirm-ok" type="button">Confirm</button>
+            </div>
+        </div>
+    </div>
     <div id="app-root">
     <div class="header-wrapper">
         <div class="navbar">
@@ -226,6 +276,57 @@
             delete map[oldKey];
             writeLocalDescriptions(map);
         }
+
+        const ConfirmDialog = {
+            el: null,
+            resolve: null,
+
+            init() {
+                this.el = {
+                    overlay: document.getElementById('confirm-overlay'),
+                    message: document.getElementById('confirm-message'),
+                    ok: document.getElementById('confirm-ok'),
+                    cancel: document.getElementById('confirm-cancel')
+                };
+                this.el.ok.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.close(true);
+                });
+                this.el.cancel.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.close(false);
+                });
+                this.el.overlay.addEventListener('click', (e) => {
+                    if (e.target === this.el.overlay) this.close(false);
+                });
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.resolve) this.close(false);
+                });
+            },
+
+            open(message, opts = {}) {
+                const { confirmText = 'Confirm', danger = false } = opts;
+                if (this.resolve) this.close(false);
+                this.el.message.textContent = message || '';
+                this.el.ok.textContent = confirmText;
+                this.el.ok.classList.toggle('confirm-danger', !!danger);
+                return new Promise((resolve) => {
+                    this.resolve = resolve;
+                    this.el.overlay.hidden = false;
+                    this.el.ok.focus();
+                });
+            },
+
+            close(result) {
+                if (!this.resolve) return;
+                const done = this.resolve;
+                this.resolve = null;
+                this.el.overlay.hidden = true;
+                done(!!result);
+            }
+        };
 
         async function refreshDataAndView(withServerRefresh = false) {
             if (withServerRefresh) await API.post('/api/refresh', {});
@@ -829,6 +930,7 @@
         // Event Listeners
         document.addEventListener('DOMContentLoaded', async () => {
             startLiveReload();
+            ConfirmDialog.init();
             UI.init();
             try {
                 await refreshDataAndView(false);
@@ -900,7 +1002,7 @@
                 }
             });
 
-            document.addEventListener('click', (e) => {
+            document.addEventListener('click', async (e) => {
                 const btn = e.target.closest('.action-btn');
                 if (btn) {
                     e.preventDefault();
@@ -910,13 +1012,15 @@
                         const actionCell = btn.closest('.action-cell');
                         const visibilitySelect = actionCell ? actionCell.querySelector('.action-visibility') : null;
                         const vis = visibilitySelect && visibilitySelect.value === 'private' ? 'private' : 'public';
-                        handleAddToGithubConfirm(repo, vis);
+                        await handleAddToGithubConfirm(repo, vis);
                     }
                     else if (action === 'delete') {
-                        if (confirm(`Delete "${repoName}"?`)) handleDeleteConfirm(repo);
+                        const ok = await ConfirmDialog.open(`Delete "${repoName}"?`, { confirmText: 'Delete', danger: true });
+                        if (ok) await handleDeleteConfirm(repo);
                     }
                     else if (action === 'delete-github') {
-                        if (confirm(`Delete "${repoName}" from GitHub?`)) handleDeleteGithubConfirm(repo);
+                        const ok = await ConfirmDialog.open(`Delete "${repoName}" from GitHub?`, { confirmText: 'Delete', danger: true });
+                        if (ok) await handleDeleteGithubConfirm(repo);
                     }
                 }
             });

@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
+import warnings
 from ipaddress import ip_address
 from dataclasses import dataclass
 from datetime import datetime
@@ -22,6 +23,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"urllib3 .* doesn't match a supported version!",
+    module=r"requests(\..*)?$",
+)
 
 # Configuration
 BASE_DIR = Path(__file__).resolve().parent

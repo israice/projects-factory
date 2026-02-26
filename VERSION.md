@@ -27,7 +27,7 @@ python run.py
 
 # UPDATE
 git add .
-git commit -m "v0.0.15 - added Delete project from github"
+git commit -m "v0.0.16 - added confirm module"
 git push
 python run.py
 
@@ -47,3 +47,4 @@ v0.0.12 - code to fast api
 v0.0.13 - added search
 v0.0.14 - added Next button
 v0.0.15 - added Delete project from github
+v0.0.16 - added confirm module
