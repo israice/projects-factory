@@ -184,6 +184,13 @@ Backend auto-restart on Python file changes:
 uvicorn main:app --reload --port 5999
 ```
 
+When running `python run.py` or `python main.py`, hot reload is now enabled by default.
+Disable it with:
+
+```env
+HOT_RELOAD=0
+```
+
 ### API Documentation
 
 Interactive API docs available at:

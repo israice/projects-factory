@@ -122,6 +122,12 @@
                       background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
         .action-btn:hover { background: #45a049; }
         .action-visibility { margin: 0 8px; padding: 8px 10px; border: 1px solid #4d4d4d; border-radius: 4px; background: #2a2a2a; color: #e0e0e0; }
+        .screenshots-panel { margin-top: 12px; text-align: left; }
+        .screenshots-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+        .screenshot-item { width: 160px; text-decoration: none; color: #e0e0e0; }
+        .screenshot-thumb { width: 160px; height: 100px; object-fit: cover; border: 1px solid #4d4d4d; border-radius: 4px; background: #111; display: block; }
+        .screenshot-name { margin-top: 4px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .screenshots-empty { color: #9e9e9e; font-size: 12px; }
         .action-btn[data-action="delete"] { background: #dc3545; }
         .action-btn[data-action="delete"]:hover { background: #c82333; }
         .action-btn[data-action="delete-github"] { background: #b71c1c; }
@@ -478,6 +484,7 @@
             },
             get: (endpoint) => API.request(endpoint, { method: 'GET' }),
             post: (endpoint, body) => API.request(endpoint, { method: 'POST', body: JSON.stringify(body) }),
+            getProjectScreenshots: (path) => API.get(`/api/project-screenshots?path=${encodeURIComponent(path || '')}`),
             installRepos: (urls) => API.post('/api/install', { repos: urls }),
             pushRepo: (path, message, versionMode = 'use_existing') => API.post('/api/push', { path, message, version_mode: versionMode }),
             addToGithub: (name, description, visibility = 'public') => API.post('/api/add-to-github', { name, description, visibility }),
@@ -707,9 +714,10 @@
                             <button class="action-btn" data-action="delete-github" data-name="${this.escape(name)}" data-url="${this.escape(url)}">☁️ Delete Repository</button>
                         `;
                     }
-                    actionRow.innerHTML = `<td colspan="6" class="action-cell">${buttons}</td>`;
+                    actionRow.innerHTML = `<td colspan="6" class="action-cell">${buttons}<div class="screenshots-panel"><div class="screenshots-empty">Loading screenshots...</div></div></td>`;
                     row.parentNode.insertBefore(actionRow, row.nextSibling);
                     cell.classList.add('active');
+                    loadProjectScreenshots(actionRow, { name, url });
                 } else {
                     cell.classList.remove('active');
                     const ar = row.nextElementSibling;
@@ -1012,6 +1020,34 @@
             }
             const stateItem = State.repos.find(r => r.name === repo.name && r.url === repo.url);
             if (stateItem) stateItem.can_push = value;
+        }
+
+        async function loadProjectScreenshots(actionRow, repo) {
+            if (!actionRow || !actionRow.isConnected) return;
+            const host = actionRow.querySelector('.screenshots-panel');
+            if (!host) return;
+            try {
+                const data = await API.getProjectScreenshots(repo.url || repo.name || '');
+                if (!actionRow.isConnected) return;
+                const items = Array.isArray(data?.items) ? data.items : [];
+                if (!items.length) {
+                    host.innerHTML = '<div class="screenshots-empty">No images in TOOLS/SCREENSHOTS</div>';
+                    return;
+                }
+                host.innerHTML = `
+                    <div class="screenshots-grid">
+                        ${items.map(item => `
+                            <a class="screenshot-item" href="${UI.escape(item.src)}" target="_blank" rel="noopener">
+                                <img class="screenshot-thumb" src="${UI.escape(item.src)}" alt="${UI.escape(item.name || 'screenshot')}" loading="lazy">
+                                <div class="screenshot-name">${UI.escape(item.name || '')}</div>
+                            </a>
+                        `).join('')}
+                    </div>
+                `;
+            } catch {
+                if (!actionRow.isConnected) return;
+                host.innerHTML = '<div class="screenshots-empty">Failed to load screenshots</div>';
+            }
         }
 
         function finishBootstrap(errorMessage = '') {

@@ -5,6 +5,8 @@ Run with: python main.py
 """
 
 import json
+import importlib.util
+import mimetypes
 import os
 import re
 import shutil
@@ -17,6 +19,7 @@ from ipaddress import ip_address
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote
 
 # Disable .pyc/__pycache__ creation for this process and child Python runs.
 os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -238,6 +241,19 @@ def get_last_version_line(repo_root: Path) -> str:
         if text:
             return text
     return ""
+
+
+def is_image_file(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    media_type, _ = mimetypes.guess_type(str(path))
+    if media_type and media_type.startswith("image/"):
+        return True
+    return path.suffix.lower() in (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico")
+
+
+def get_project_screenshots_dir(project_root: Path) -> Path:
+    return project_root / "TOOLS" / "SCREENSHOTS"
 
 
 def ensure_create_project_script():
@@ -641,6 +657,45 @@ async def push_states():
     return {"items": items}
 
 
+@app.get("/api/project-screenshots")
+async def project_screenshots(path: str = ""):
+    resolved = resolve_project_path(path)
+    if not resolved:
+        raise HTTPException(404, "Folder not found")
+
+    screenshots_dir = get_project_screenshots_dir(resolved)
+    if not screenshots_dir.exists() or not screenshots_dir.is_dir():
+        return {"items": []}
+
+    items = []
+    for file_path in sorted(screenshots_dir.iterdir(), key=lambda p: p.name.lower()):
+        if not is_image_file(file_path):
+            continue
+        src = f"/api/project-screenshot-file?path={quote(str(resolved))}&name={quote(file_path.name)}"
+        items.append({"name": file_path.name, "src": src})
+    return {"items": items}
+
+
+@app.get("/api/project-screenshot-file")
+async def project_screenshot_file(path: str = "", name: str = ""):
+    resolved = resolve_project_path(path)
+    file_name = str(name or "").strip()
+    if not resolved:
+        raise HTTPException(404, "Folder not found")
+    if not file_name:
+        raise HTTPException(400, "Missing image name")
+
+    screenshots_dir = get_project_screenshots_dir(resolved)
+    candidate = (screenshots_dir / file_name).resolve()
+    if screenshots_dir.resolve() not in candidate.parents:
+        raise HTTPException(400, "Invalid image path")
+    if not candidate.exists() or not is_image_file(candidate):
+        raise HTTPException(404, "Image not found")
+
+    media_type, _ = mimetypes.guess_type(str(candidate))
+    return FileResponse(str(candidate), media_type=media_type or "application/octet-stream")
+
+
 @app.post("/api/refresh")
 async def refresh(request: Request):
     require_write_access(request)
@@ -962,5 +1017,19 @@ async def push_repo(payload: PushPayload, request: Request):
 
 if __name__ == "__main__":
     import uvicorn
+    hot_reload = str(os.getenv("HOT_RELOAD", "1")).strip().lower() in ("1", "true", "yes", "on")
+    if hot_reload and importlib.util.find_spec("watchfiles") is None:
+        raise RuntimeError(
+            "HOT_RELOAD=1 requires 'watchfiles'. Install dependencies and retry: python -m pip install -r requirements.txt"
+        )
+    reload_dirs = [str(BACKEND_DIR), str(FRONTEND_DIR)]
+    reload_includes = ["main.py", "run.py", "BACKEND/*", "FRONTEND/*"]
     print(f"GitHub Projects Manager on http://{HOST}:{PORT}")
-    uvicorn.run(app, host=HOST, port=PORT, reload=False)
+    uvicorn.run(
+        "main:app",
+        host=HOST,
+        port=PORT,
+        reload=hot_reload,
+        reload_dirs=reload_dirs if hot_reload else None,
+        reload_includes=reload_includes if hot_reload else None,
+    )
