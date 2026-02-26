@@ -500,6 +500,106 @@ def resolve_project_path(raw_path: str):
     return resolved
 
 
+def _list_windows_explorer_handles():
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    handles = []
+    class_names = {"CabinetWClass", "ExplorerWClass"}
+    buffer_size = 256
+
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    def enum_proc(hwnd, _lparam):
+        if not user32.IsWindowVisible(hwnd):
+            return True
+        class_buf = ctypes.create_unicode_buffer(buffer_size)
+        user32.GetClassNameW(hwnd, class_buf, buffer_size)
+        if class_buf.value in class_names:
+            handles.append(int(hwnd))
+        return True
+
+    user32.EnumWindows(enum_proc, 0)
+    return handles
+
+
+def _force_foreground_window(hwnd: int):
+    import ctypes
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    sw_showmaximized = 3
+    hwnd_topmost = -1
+    hwnd_notopmost = -2
+    swp_nosize = 0x0001
+    swp_nomove = 0x0002
+    swp_showwindow = 0x0040
+
+    foreground = user32.GetForegroundWindow()
+    cur_tid = kernel32.GetCurrentThreadId()
+    fg_tid = user32.GetWindowThreadProcessId(foreground, None) if foreground else 0
+    target_tid = user32.GetWindowThreadProcessId(hwnd, None)
+
+    attached_fg = False
+    attached_target = False
+    try:
+        if fg_tid and fg_tid != cur_tid:
+            attached_fg = bool(user32.AttachThreadInput(fg_tid, cur_tid, True))
+        if target_tid and target_tid != cur_tid:
+            attached_target = bool(user32.AttachThreadInput(target_tid, cur_tid, True))
+
+        user32.ShowWindow(hwnd, sw_showmaximized)
+        user32.BringWindowToTop(hwnd)
+        # Toggle TOPMOST to move explorer above other windows, then restore normal z-order.
+        user32.SetWindowPos(hwnd, hwnd_topmost, 0, 0, 0, 0, swp_nosize | swp_nomove | swp_showwindow)
+        user32.SetWindowPos(hwnd, hwnd_notopmost, 0, 0, 0, 0, swp_nosize | swp_nomove | swp_showwindow)
+        user32.SetForegroundWindow(hwnd)
+        user32.SetActiveWindow(hwnd)
+        user32.SetFocus(hwnd)
+    finally:
+        if attached_target:
+            user32.AttachThreadInput(target_tid, cur_tid, False)
+        if attached_fg:
+            user32.AttachThreadInput(fg_tid, cur_tid, False)
+
+
+def open_folder_in_explorer(path: Path):
+    if os.name == "nt":
+        import ctypes
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        before = set(_list_windows_explorer_handles())
+        subprocess.Popen(
+            ["cmd", "/c", "start", "", "explorer", str(path)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+        selected = None
+        deadline = time.time() + 4.0
+        while time.time() < deadline:
+            time.sleep(0.05)
+            current = _list_windows_explorer_handles()
+            new_handles = [hwnd for hwnd in current if hwnd not in before]
+            if new_handles:
+                selected = new_handles[-1]
+                break
+            if current:
+                selected = current[-1]
+
+        if not selected:
+            selected = int(user32.GetForegroundWindow() or 0) or None
+        if selected:
+            _force_foreground_window(selected)
+        return
+
+    if sys.platform == "darwin":
+        run_command(["open", str(path)], timeout=30)
+        return
+
+    run_command(["xdg-open", str(path)], timeout=30)
+
+
 def _is_loopback_host(host: str):
     if not host:
         return False
@@ -987,12 +1087,7 @@ async def open_folder_explorer(payload: OpenFolderPayload, request: Request):
         raise HTTPException(404, "Folder not found")
 
     try:
-        if os.name == "nt":
-            os.startfile(str(resolved))  # type: ignore[attr-defined]
-        elif sys.platform == "darwin":
-            run_command(["open", str(resolved)], timeout=30)
-        else:
-            run_command(["xdg-open", str(resolved)], timeout=30)
+        open_folder_in_explorer(resolved)
     except Exception as e:
         raise HTTPException(500, str(e))
     return {"success": True, "path": str(resolved)}
