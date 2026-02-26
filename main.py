@@ -213,6 +213,18 @@ def run_command(cmd, cwd=None, timeout=None):
     return result
 
 
+def is_non_fast_forward_error(message: str) -> bool:
+    text = (message or "").lower()
+    markers = (
+        "non-fast-forward",
+        "[rejected]",
+        "fetch first",
+        "tip of your current branch is behind",
+        "failed to push some refs",
+    )
+    return any(marker in text for marker in markers)
+
+
 def ensure_create_project_script():
     script = MY_REPOS_DIR / "Create-Project-Folder" / "create_new_project.py"
     if script.exists():
@@ -910,8 +922,13 @@ async def push_repo(payload: PushPayload, request: Request):
                 raise
         branch_result = run_command(["git", "branch", "--show-current"], cwd=resolved, timeout=10)
         branch = (branch_result.stdout or "").strip() or "master"
-        run_command(["git", "pull", "--rebase", "origin", branch], cwd=resolved, timeout=TIMEOUTS["git_push"])
-        run_command(["git", "push", "origin", branch], cwd=resolved, timeout=TIMEOUTS["git_push"])
+        try:
+            run_command(["git", "push", "origin", branch], cwd=resolved, timeout=TIMEOUTS["git_push"])
+        except Exception as push_error:
+            if not is_non_fast_forward_error(str(push_error)):
+                raise
+            run_command(["git", "pull", "--rebase", "origin", branch], cwd=resolved, timeout=TIMEOUTS["git_push"])
+            run_command(["git", "push", "origin", branch], cwd=resolved, timeout=TIMEOUTS["git_push"])
         invalidate_runtime_caches()
         return {"success": True, "path": str(resolved), "message": commit_message}
     except Exception as e:
