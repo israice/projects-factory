@@ -41,3 +41,4 @@ v0.0.28 - fixed HOT PAGE RELOAD
 v0.0.29 - added TASKS.md
 v0.0.30 - added more tasks
 v0.0.31 - and more tasks
+v0.0.32 - improved API request handling

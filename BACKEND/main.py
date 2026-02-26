@@ -167,6 +167,21 @@ app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_credentials
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
+@app.middleware("http")
+async def force_static_200(request: Request, call_next):
+    if request.url.path.startswith("/static/"):
+        # Remove conditional request headers so static responses are sent as 200.
+        headers = request.scope.get("headers") or []
+        request.scope["headers"] = [
+            (k, v) for (k, v) in headers
+            if k.lower() not in (b"if-none-match", b"if-modified-since")
+        ]
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @dataclass
 class Project:
     name: str
