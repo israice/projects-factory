@@ -117,10 +117,12 @@ body.app-error #boot-loader { color: #ff6b6b; }
         .action-row { display: none; }
         .action-row.show { display: table-row; background: #2a2a2a; }
         .action-cell { padding: 10px; text-align: center; }
-        .action-btn { display: inline-flex; align-items: center; gap: 6px; margin: 0 8px; padding: 8px 16px;
-                      background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .action-btn { display: inline-flex; align-items: center; gap: 6px; margin: 0 8px; padding: 0 16px;
+                      background: #4CAF50; color: #fff; border: 1px solid transparent; border-radius: 4px; cursor: pointer; font-size: 14px;
+                      height: 36px; box-sizing: border-box; vertical-align: middle; line-height: 1; }
         .action-btn:hover { background: #45a049; }
-        .action-visibility { margin: 0 8px; padding: 8px 10px; border: 1px solid #4d4d4d; border-radius: 4px; background: #2a2a2a; color: #e0e0e0; }
+        .action-visibility { margin: 0 8px; padding: 0 10px; border: 1px solid #4d4d4d; border-radius: 4px; background: #2a2a2a; color: #e0e0e0;
+                             height: 36px; box-sizing: border-box; vertical-align: middle; font-size: 14px; }
         .screenshots-panel { margin-top: 12px; text-align: center; }
         .screenshots-grid { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
         .screenshot-item { width: 160px; text-decoration: none; color: #e0e0e0; }
@@ -131,6 +133,19 @@ body.app-error #boot-loader { color: #ff6b6b; }
         .action-btn[data-action="delete"]:hover { background: #c82333; }
         .action-btn[data-action="delete-github"] { background: #b71c1c; }
         .action-btn[data-action="delete-github"]:hover { background: #9a1818; }
+        .action-submenu-wrap { position: relative; display: inline-block; vertical-align: middle; }
+        .action-submenu { display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 4px;
+                          background: #333; border: 1px solid #555; border-radius: 6px; padding: 6px; white-space: nowrap; z-index: 50;
+                          box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+        .action-submenu.open { display: flex; flex-direction: column; gap: 4px; }
+        .action-submenu .action-btn { margin: 0; width: 100%; justify-content: center; }
+        .action-btn svg { flex-shrink: 0; }
+        .action-cell .action-btn[data-submenu="local"] { background: #8a7a3a; color: #e0e0e0; }
+        .action-cell .action-btn[data-submenu="local"]:hover { background: #9e8c42; }
+        .action-cell .action-btn[data-submenu="github"],
+        .action-cell .action-btn[data-action="github"] { background: #161b22; color: #fff; border: 1px solid #555; }
+        .action-cell .action-btn[data-submenu="github"]:hover,
+        .action-cell .action-btn[data-action="github"]:hover { background: #2a3040; }
         .rename-input { width: 90%; padding: 6px; background: #404040; color: #e0e0e0; 
                         border: 1px solid #4CAF50; border-radius: 4px; font-size: inherit; }
 

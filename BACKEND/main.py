@@ -334,7 +334,7 @@ def get_new_projects(states_by_path=None):
                 logger.debug("Cannot read creation time for %s: %s", entry, exc)
                 created = ""
             projects.append(Project(entry.name, str(entry).replace("\\", "/"),
-                                    False, "Local project folder", created, True).as_dict())
+                                    False, "", created, True).as_dict())
     return projects
 
 
@@ -667,27 +667,47 @@ def remove_repo_from_yaml(name):
 
 @app.get("/")
 async def index():
-    return FileResponse(str(FRONTEND_DIR / "index.html"))
+    return FileResponse(str(FRONTEND_DIR / "index.html"), headers={
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    })
 
 
 @app.get("/app.js")
 async def app_js():
-    return FileResponse(str(FRONTEND_DIR / "app.js"), media_type="application/javascript")
+    return FileResponse(str(FRONTEND_DIR / "app.js"), media_type="application/javascript", headers={
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    })
 
 
 @app.get("/ui.templates.js")
 async def ui_templates_js():
-    return FileResponse(str(FRONTEND_DIR / "ui.templates.js"), media_type="application/javascript")
+    return FileResponse(str(FRONTEND_DIR / "ui.templates.js"), media_type="application/javascript", headers={
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    })
 
 
 @app.get("/app.css")
 async def app_css():
-    return FileResponse(str(FRONTEND_DIR / "app.css"), media_type="text/css")
+    return FileResponse(str(FRONTEND_DIR / "app.css"), media_type="text/css", headers={
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    })
 
 
 @app.get("/app.template.html")
 async def app_template():
-    return FileResponse(str(FRONTEND_DIR / "app.template.html"), media_type="text/html")
+    return FileResponse(str(FRONTEND_DIR / "app.template.html"), media_type="text/html", headers={
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    })
 
 
 @app.get("/favicon.ico")

@@ -820,7 +820,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 if (!actionRow.isConnected) return;
                 const items = Array.isArray(data?.items) ? data.items : [];
                 if (!items.length) {
-                    host.innerHTML = '<div class="screenshots-empty">No images in TOOLS/SCREENSHOTS</div>';
+                    host.innerHTML = '';
                     return;
                 }
                 host.innerHTML = `
@@ -835,7 +835,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 `;
             } catch {
                 if (!actionRow.isConnected) return;
-                host.innerHTML = '<div class="screenshots-empty">Failed to load screenshots</div>';
+                host.innerHTML = '';
             }
         }
 
@@ -964,11 +964,30 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 }
             }, { signal });
 
+            document.addEventListener('click', (e) => {
+                const toggleBtn = e.target.closest('[data-action="toggle-submenu"]');
+                if (toggleBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const wrap = toggleBtn.closest('.action-submenu-wrap');
+                    const submenu = wrap ? wrap.querySelector('.action-submenu') : null;
+                    if (!submenu) return;
+                    const wasOpen = submenu.classList.contains('open');
+                    document.querySelectorAll('.action-submenu.open').forEach(s => s.classList.remove('open'));
+                    if (!wasOpen) submenu.classList.add('open');
+                    return;
+                }
+                if (!e.target.closest('.action-submenu-wrap')) {
+                    document.querySelectorAll('.action-submenu.open').forEach(s => s.classList.remove('open'));
+                }
+            }, { signal });
+
             document.addEventListener('click', async (e) => {
                 const btn = e.target.closest('.action-btn');
                 if (btn) {
                     e.preventDefault();
                     const { action, name: repoName, url: repoUrl } = btn.dataset;
+                    if (action === 'toggle-submenu') return;
                     const repo = { name: repoName, url: repoUrl };
                     if (action === 'add-to-github') {
                         const actionCell = btn.closest('.action-cell');
