@@ -45,3 +45,4 @@ v0.0.32 - improved API request handling
 v0.0.33 - added open folder and vscode in fullscreen
 v0.0.34 - added screenshots and tasks
 v0.0.35 - added sub menu inside buttom panel
+v0.0.36 - added VSCode button

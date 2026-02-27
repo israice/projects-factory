@@ -208,6 +208,9 @@ def run_script(script: Path, args=None, timeout=None):
     cmd = [sys.executable, str(script)] + (args or [])
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
+    # Guard child Python processes from broken interpreter env overrides.
+    env.pop("PYTHONHOME", None)
+    env.pop("PYTHONPATH", None)
     result = subprocess.run(cmd, capture_output=True, text=True,
                           timeout=timeout, encoding='utf-8', errors='replace', env=env)
     if result.returncode != 0:
@@ -465,6 +468,10 @@ def repo_name_from_url(repo_url: str):
     return name.strip()
 
 
+PROJECTS_FACTORY_REPO_URL = "https://github.com/israice/projects-factory"
+PROJECTS_FACTORY_REPO_NAME = repo_name_from_url(PROJECTS_FACTORY_REPO_URL).lower()
+
+
 def resolve_project_path(raw_path: str):
     raw = str(raw_path or "").strip()
     if not raw:
@@ -475,14 +482,18 @@ def resolve_project_path(raw_path: str):
     if direct.exists() and direct.is_dir():
         resolved = direct.resolve()
     else:
-        guessed_name = repo_name_from_url(raw)
-        if not guessed_name:
-            guessed_name = Path(raw).name.strip()
-        if guessed_name:
-            # Prefer current workspace repo if URL/name points to it.
-            if BASE_DIR.name == guessed_name and (BASE_DIR / ".git").exists():
-                resolved = BASE_DIR.resolve()
-            else:
+        normalized_raw = normalize_repo_url(raw)
+        # Special-case: this repository lives in BASE_DIR (one level above MY_REPOS/*).
+        if (BASE_DIR / ".git").exists() and (
+            normalized_raw == normalize_repo_url(PROJECTS_FACTORY_REPO_URL)
+            or repo_name_from_url(raw).strip().lower() == PROJECTS_FACTORY_REPO_NAME
+        ):
+            resolved = BASE_DIR.resolve()
+        else:
+            guessed_name = repo_name_from_url(raw)
+            if not guessed_name:
+                guessed_name = Path(raw).name.strip()
+            if guessed_name:
                 guessed = (MY_REPOS_DIR / guessed_name).resolve()
                 if guessed.exists() and guessed.is_dir():
                     resolved = guessed
@@ -490,6 +501,10 @@ def resolve_project_path(raw_path: str):
                     guessed = (NEW_PROJECTS_DIR / guessed_name).resolve()
                     if guessed.exists() and guessed.is_dir():
                         resolved = guessed
+                    else:
+                        # Fallback to current workspace repo only if no local repo folder matched.
+                        if BASE_DIR.name == guessed_name and (BASE_DIR / ".git").exists():
+                            resolved = BASE_DIR.resolve()
 
     if not resolved:
         return None

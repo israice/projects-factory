@@ -41,12 +41,19 @@ def vscode_version_ok(code_cmd: str | None) -> bool:
     if not code_cmd:
         return False
     try:
+        creationflags = 0
+        if sys.platform == "win32":
+            create_no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            detached_process = getattr(subprocess, "DETACHED_PROCESS", 0)
+            creationflags = create_no_window | detached_process
         r = subprocess.run(
             [code_cmd, "--version"],
             check=False,
-            capture_output=True,
-            text=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
             timeout=20,
+            creationflags=creationflags,
         )
         return r.returncode == 0
     except Exception:
@@ -177,10 +184,11 @@ def main(argv: list[str]) -> int:
         print(err or "VS Code CLI is unavailable", file=sys.stderr)
         return 1
 
-    launch_cmd = [cmd, str(target)]
+    folder_uri = target.as_uri()
+    launch_cmd = [cmd, "--folder-uri", folder_uri]
     if sys.platform == "win32":
         # Open immediately in maximized state when possible.
-        launch_cmd = [cmd, "--new-window", "--maximized", str(target)]
+        launch_cmd = [cmd, "--new-window", "--maximized", "--folder-uri", folder_uri]
         before_windows = set()
         for proc in ("Code.exe", "Code - Insiders.exe"):
             r = subprocess.run(["tasklist", "/FI", f"IMAGENAME eq {proc}", "/FO", "CSV", "/NH"], capture_output=True, text=True)
@@ -192,21 +200,44 @@ def main(argv: list[str]) -> int:
                     before_windows.update(_list_windows_for_pid(int(parts[1])))
 
     try:
-        subprocess.run(launch_cmd, check=True, capture_output=True, text=True)
-    except subprocess.CalledProcessError as e:
+        proc = subprocess.Popen(
+            launch_cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+        )
+        # Brief wait to detect immediate launch failures (e.g. bad path, missing executable).
+        time.sleep(0.3)
+        if proc.poll() is not None and proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, launch_cmd)
+    except (subprocess.CalledProcessError, OSError) as e:
         if sys.platform == "win32":
-            detail = ((e.stderr or "") + "\n" + (e.stdout or "")).lower()
-            if "unknown option" in detail or "unrecognized option" in detail:
-                try:
-                    subprocess.run([cmd, str(target)], check=True, capture_output=True, text=True)
-                except subprocess.CalledProcessError as e2:
-                    detail2 = (e2.stderr or e2.stdout or str(e2)).strip()
-                    print(f"Failed to open in VS Code: {detail2[:300]}", file=sys.stderr)
-                    return 1
-                print(f"Opened in VS Code: {target}")
-                return 0
-        detail = (e.stderr or e.stdout or str(e)).strip()
-        print(f"Failed to open in VS Code: {detail[:300]}", file=sys.stderr)
+            # Retry without optional flags in case they are not supported.
+            try:
+                proc = subprocess.Popen(
+                    [cmd, "--new-window", "--folder-uri", folder_uri],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    stdin=subprocess.DEVNULL,
+                )
+                time.sleep(0.3)
+                if proc.poll() is not None and proc.returncode != 0:
+                    proc = subprocess.Popen(
+                        [cmd, str(target)],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        stdin=subprocess.DEVNULL,
+                    )
+                    time.sleep(0.3)
+                    if proc.poll() is not None and proc.returncode != 0:
+                        print(f"Failed to open in VS Code: exit code {proc.returncode}", file=sys.stderr)
+                        return 1
+            except OSError as e2:
+                print(f"Failed to open in VS Code: {e2}", file=sys.stderr)
+                return 1
+            print(f"Opened in VS Code: {target}")
+            return 0
+        print(f"Failed to open in VS Code: {e}", file=sys.stderr)
         return 1
 
     if sys.platform == "win32":

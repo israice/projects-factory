@@ -9,6 +9,8 @@ timeouts:
 
 create_project_repo_url: "https://github.com/israice/Create-Project-Folder.git"
 
+base_directory: "NEW_PROJECTS"
+
 cache:
   git_state_ttl_sec: 10
 

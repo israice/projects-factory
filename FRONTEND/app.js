@@ -500,7 +500,6 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 this.closeAllActionRows(cell);
 
                 if (!active) {
-                    if (!isNew && !installed) return;
                     const actionRow = document.createElement('tr');
                     actionRow.className = 'action-row show';
                     const buttons = templateApi.renderActionButtons({
@@ -657,11 +656,37 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             }
         }
 
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function isTransientOpenError(err) {
+            const msg = String(err?.message || err || '').toLowerCase();
+            return (
+                msg.includes('http 500')
+                || msg.includes('internal server error')
+                || msg.includes('failed to fetch')
+                || msg.includes('networkerror')
+                || msg.includes('network error')
+                || msg.includes('aborterror')
+            );
+        }
+
+        async function openWithRetry(openCall, retryDelayMs = 300) {
+            try {
+                return await openCall();
+            } catch (firstErr) {
+                if (!isTransientOpenError(firstErr)) throw firstErr;
+                await delay(retryDelayMs);
+                return await openCall();
+            }
+        }
+
         async function launchRepoFromUrlAction(repo, rowNo, isLocal) {
             if (!repo || !repo.url) return;
             if (isLocal) {
                 try {
-                    await API.openFolder(repo.url);
+                    await openWithRetry(() => API.openFolder(repo.url));
                     UI.markLastUrlLaunch(rowNo);
                     UI.showWelcome('✅ Opened in VS Code');
                 } catch (err) {
@@ -676,7 +701,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 if (!ok) return;
             }
             try {
-                await API.openFolder(repo.name || repo.url);
+                await openWithRetry(() => API.openFolder(repo.url || repo.name));
                 UI.markLastUrlLaunch(rowNo);
                 UI.showWelcome('✅ Opened in VS Code');
             } catch (err) {
@@ -921,32 +946,17 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             });
 
             document.addEventListener('click', (e) => {
-                const cell = e.target.closest('.logo-cell');
+                const cell = e.target.closest('.logo-cell, .name-cell, .description-cell');
                 if (!cell) return;
                 e.stopPropagation();
-                UI.openActionRow(cell);
+                const logoCell = cell.classList.contains('logo-cell')
+                    ? cell
+                    : cell.closest('tr')?.querySelector('.logo-cell');
+                if (logoCell) UI.openActionRow(logoCell);
             }, { signal });
 
             document.addEventListener('click', (e) => {
-                const cell = e.target.closest('.name-cell');
-                if (!cell) return;
-                e.stopPropagation();
-                const row = cell.closest('tr');
-                const endpoint = row && row.dataset.isNew === 'true' ? '/api/rename' : '/api/rename-github';
-                makeEditable(cell, cell.dataset.repo, cell.dataset.url, endpoint);
-            }, { signal });
-
-            document.addEventListener('click', (e) => {
-                const cell = e.target.closest('.description-cell');
-                if (!cell) return;
-                e.stopPropagation();
-                const row = cell.closest('tr');
-                if (!row) return;
-                const isLocal = row.dataset.isNew === 'true';
-                makeDescriptionEditable(cell, cell.dataset.repo, isLocal);
-            }, { signal });
-            document.addEventListener('click', (e) => {
-                if (e.target.closest('.logo-cell') || e.target.closest('.action-row')) return;
+                if (e.target.closest('.logo-cell, .name-cell, .description-cell') || e.target.closest('.action-row')) return;
                 UI.closeAllActionRows();
             }, { signal });
 
@@ -989,7 +999,25 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                     const { action, name: repoName, url: repoUrl } = btn.dataset;
                     if (action === 'toggle-submenu') return;
                     const repo = { name: repoName, url: repoUrl };
-                    if (action === 'add-to-github') {
+                    if (action === 'edit-name') {
+                        const actionRow = btn.closest('tr.action-row');
+                        const repoRow = actionRow ? actionRow.previousElementSibling : null;
+                        if (!repoRow) return;
+                        const cell = repoRow.querySelector('.name-cell');
+                        if (!cell) return;
+                        const endpoint = repoRow.dataset.isNew === 'true' ? '/api/rename' : '/api/rename-github';
+                        makeEditable(cell, cell.dataset.repo, cell.dataset.url, endpoint);
+                    }
+                    else if (action === 'edit-description') {
+                        const actionRow = btn.closest('tr.action-row');
+                        const repoRow = actionRow ? actionRow.previousElementSibling : null;
+                        if (!repoRow) return;
+                        const cell = repoRow.querySelector('.description-cell');
+                        if (!cell) return;
+                        const isLocal = repoRow.dataset.isNew === 'true';
+                        makeDescriptionEditable(cell, cell.dataset.repo, isLocal);
+                    }
+                    else if (action === 'add-to-github') {
                         const actionCell = btn.closest('.action-cell');
                         const visibilitySelect = actionCell ? actionCell.querySelector('.action-visibility') : null;
                         const vis = visibilitySelect && visibilitySelect.value === 'private' ? 'private' : 'public';
@@ -1001,9 +1029,17 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                         const pushMode = pushModeSelect ? String(pushModeSelect.value || 'use_existing') : 'use_existing';
                         await handlePushConfirm(repo, pushMode);
                     }
+                    else if (action === 'open-vscode') {
+                        const actionRow = btn.closest('tr.action-row');
+                        const repoRow = actionRow ? actionRow.previousElementSibling : null;
+                        const isLocal = repoRow ? repoRow.dataset.isNew === 'true' : false;
+                        const rowNo = repoRow ? Number(repoRow.querySelector('.rownum-cell')?.textContent || 0) : 0;
+                        await launchRepoFromUrlAction(repo, rowNo, isLocal);
+                        closeActionRow(repo.url);
+                    }
                     else if (action === 'open-folder') {
                         try {
-                            await API.openFolderExplorer(repo.url || repo.name);
+                            await openWithRetry(() => API.openFolderExplorer(repo.url || repo.name));
                             UI.showWelcome('✅ Folder opened');
                             closeActionRow(repo.url);
                         } catch (e) {

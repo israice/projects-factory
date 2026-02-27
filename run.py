@@ -131,8 +131,9 @@ if __name__ == "__main__":
     thread = threading.Thread(target=vite_worker, daemon=True, name="vite-worker")
     thread.start()
 
-    reload_dirs = [str(BASE_DIR), str(BASE_DIR / "BACKEND")]
-    reload_includes = ["run.py", "BACKEND/*.py"]
+    # Watch backend code only; ignore repository content changes in MY_REPOS/NEW_PROJECTS.
+    reload_dirs = [str(BASE_DIR / "BACKEND")]
+    reload_includes = ["*.py"]
     try:
         uvicorn.run(
             "BACKEND.main:app",
