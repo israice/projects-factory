@@ -340,13 +340,19 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             sortKey: 'created_at',
             sortDir: 'desc',
             welcomeTimer: null,
+            clockTimer: null,
             init() {
+                if (this.clockTimer) {
+                    clearInterval(this.clockTimer);
+                    this.clockTimer = null;
+                }
                 this.el = {
                     username: document.getElementById('nav-username'),
                     repos: document.getElementById('nav-repos'),
                     installed: document.getElementById('nav-installed'),
                     localOnly: document.getElementById('nav-local-only'),
                     lastUrl: document.getElementById('nav-last-url'),
+                    clock: document.getElementById('nav-clock'),
                     welcome: document.getElementById('welcome-text'),
                     avatarContainer: document.getElementById('avatar-container'),
                     avatarImg: document.getElementById('avatar-img'),
@@ -356,6 +362,19 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                     headers: Array.from(document.querySelectorAll('#repos-table thead th[data-sort]'))
                 };
                 this.updateSortHeader();
+                this.startClock();
+            },
+            updateClock() {
+                if (!this.el.clock) return;
+                const now = new Date();
+                const hh = String(now.getHours());
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                const ss = String(now.getSeconds()).padStart(2, '0');
+                setTextIfChanged(this.el.clock, `🕒 ${hh}:${mm}:${ss}`);
+            },
+            startClock() {
+                this.updateClock();
+                this.clockTimer = setInterval(() => this.updateClock(), 1000);
             },
             setSort(key) {
                 if (this.sortKey === key) {
@@ -987,6 +1006,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 e.preventDefault();
                 await launchNextFromLastOpened();
             }, { signal });
+            UI.el.clock?.addEventListener('click', (e) => e.preventDefault(), { signal });
 
             UI.el.welcome.addEventListener('click', () => UI.showWelcome('Добро пожаловать, Мастер'), { signal });
             UI.el.search.addEventListener('input', () => UI.renderTable(), { signal });

@@ -31,6 +31,7 @@ body.app-error #boot-loader { color: #ff6b6b; }
         .nav-row { display: flex; gap: 10px; padding: 10px 20px; justify-content: center; }
         .nav-row a { color: #e0e0e0; text-decoration: none; padding: 8px 16px; background: #3d3d3d; border-radius: 4px; }
         .nav-row a:hover { background: #4d4d4d; }
+        #nav-clock { color: #00ff00; text-shadow: 0 0 6px rgba(0, 255, 0, 0.45); }
         .welcome-row { padding: 0 20px 10px; display: flex; justify-content: center; }
         .welcome-text { color: #0f0; font-weight: 700; font-family: 'Courier New', monospace; cursor: pointer; }
         

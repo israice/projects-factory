@@ -49,3 +49,4 @@ v0.0.34 - added screenshots and tasks
 v0.0.35 - added sub menu inside buttom panel
 v0.0.36 - added VSCode button
 v0.0.37 - added bitwarden instead env
+v0.0.38 - added green clock to right top 
