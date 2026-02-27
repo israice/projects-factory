@@ -168,6 +168,54 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             }
         };
 
+        const ImagePreview = {
+            el: null,
+            openSrc: '',
+
+            init(signal) {
+                this.el = {
+                    overlay: document.getElementById('image-preview-overlay'),
+                    image: document.getElementById('image-preview-img')
+                };
+                this.close();
+                this.el.overlay.addEventListener('click', () => this.close(), { signal });
+                this.el.image.addEventListener('click', () => this.close(), { signal });
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') this.close();
+                }, { signal });
+                document.addEventListener('click', (e) => {
+                    const trigger = e.target?.closest?.('.screenshot-item[data-preview-src]');
+                    if (!trigger) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const src = String(trigger.dataset.previewSrc || '').trim();
+                    const alt = String(trigger.dataset.previewAlt || '').trim();
+                    if (!src) return;
+                    if (!this.el.overlay.hidden && this.openSrc === src) {
+                        this.close();
+                        return;
+                    }
+                    this.open(src, alt);
+                }, { signal });
+            },
+
+            open(src, alt = 'preview') {
+                if (!this.el?.overlay || !this.el?.image) return;
+                this.openSrc = src;
+                this.el.image.src = src;
+                this.el.image.alt = alt || 'preview';
+                this.el.overlay.hidden = false;
+            },
+
+            close() {
+                if (!this.el?.overlay || !this.el?.image) return;
+                this.openSrc = '';
+                this.el.overlay.hidden = true;
+                this.el.image.removeAttribute('src');
+                this.el.image.alt = '';
+            }
+        };
+
         async function refreshDataAndView(withServerRefresh = false) {
             if (withServerRefresh) await API.post('/api/refresh', {});
             await State.init();
@@ -851,10 +899,10 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 host.innerHTML = `
                     <div class="screenshots-grid">
                         ${items.map(item => `
-                            <a class="screenshot-item" href="${UI.escape(item.src)}" target="_blank" rel="noopener">
+                            <button class="screenshot-item" type="button" data-preview-src="${UI.escape(item.src)}" data-preview-alt="${UI.escape(item.name || 'screenshot')}">
                                 <img class="screenshot-thumb" src="${UI.escape(item.src)}" alt="${UI.escape(item.name || 'screenshot')}" loading="lazy">
                                 <div class="screenshot-name">${UI.escape(item.name || '')}</div>
-                            </a>
+                            </button>
                         `).join('')}
                     </div>
                 `;
@@ -913,6 +961,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             const signal = appEventController.signal;
 
             ConfirmDialog.init(signal);
+            ImagePreview.init(signal);
             UI.init();
             try {
                 if (skipDataReload) {
@@ -957,6 +1006,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
 
             document.addEventListener('click', (e) => {
                 if (e.target.closest('.logo-cell, .name-cell, .description-cell') || e.target.closest('.action-row')) return;
+                if (e.target.closest('#image-preview-overlay')) return;
                 UI.closeAllActionRows();
             }, { signal });
 

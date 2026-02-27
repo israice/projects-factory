@@ -23,13 +23,45 @@ sys.dont_write_bytecode = True
 
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR / "FRONTEND"
+SETTINGS_PATH = BASE_DIR / "settings.yaml"
 sys.path.insert(0, str(BASE_DIR))
 
 from dotenv import load_dotenv
 load_dotenv()
 
-PORT = int(os.getenv("PORT", "5999"))
-HOST = os.getenv("HOST", "127.0.0.1")
+
+def load_server_settings() -> tuple[int, str]:
+    default_port = int(os.getenv("PORT", "5999"))
+    default_host = os.getenv("HOST", "127.0.0.1").strip() or "127.0.0.1"
+
+    if not SETTINGS_PATH.exists():
+        return default_port, default_host
+
+    try:
+        import yaml
+        raw = yaml.safe_load(SETTINGS_PATH.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return default_port, default_host
+
+    if not isinstance(raw, dict):
+        return default_port, default_host
+
+    server = raw.get("server") or {}
+    if not isinstance(server, dict):
+        return default_port, default_host
+
+    try:
+        port = int(server.get("port", default_port))
+    except Exception:
+        port = default_port
+    if port < 1:
+        port = default_port
+
+    host = str(server.get("host", default_host)).strip() or default_host
+    return port, host
+
+
+PORT, HOST = load_server_settings()
 
 
 def env_flag(name: str, default: str = "1") -> bool:
@@ -116,6 +148,39 @@ def stop_process(proc: subprocess.Popen | None) -> None:
 
 if __name__ == "__main__":
     import uvicorn
+
+    if env_flag("BITWARDEN_ENABLED", "0"):
+        provider = os.getenv("BITWARDEN_PROVIDER", "auto").strip().lower() or "auto"
+        if provider == "auto":
+            provider = "bws" if bool(os.getenv("BWS_ACCESS_TOKEN", "").strip()) else "bw"
+        if provider == "bws":
+            from BACKEND.bitwarden_env import inject_github_env_from_bws, verify_bws_capabilities
+
+            bws_project_id = os.getenv("BWS_PROJECT_ID", "").strip() or None
+            token_key = os.getenv("BWS_GITHUB_TOKEN_SECRET", "GITHUB_TOKEN").strip() or "GITHUB_TOKEN"
+            username_key = os.getenv("BWS_GITHUB_USERNAME_SECRET", "GITHUB_USERNAME").strip() or "GITHUB_USERNAME"
+            require_write = env_flag("BWS_REQUIRE_WRITE", "1")
+
+            verify_bws_capabilities(require_write=require_write, project_id=bws_project_id)
+            inject_github_env_from_bws(
+                project_id=bws_project_id,
+                token_key=token_key,
+                username_key=username_key,
+            )
+            print("Bitwarden secrets loaded via bws.")
+            print(f"BWS write probe: {'enabled' if require_write else 'disabled'}")
+        elif provider == "bw":
+            from BACKEND.bitwarden_env import inject_github_env_from_bw
+
+            bw_item = os.getenv("BITWARDEN_ITEM", "projects-factory/github").strip() or "projects-factory/github"
+            inject_github_env_from_bw(bw_item)
+            print(f"Bitwarden secrets loaded from item: {bw_item}")
+        else:
+            raise RuntimeError("Unsupported BITWARDEN_PROVIDER. Use 'auto', 'bws', or 'bw'.")
+        print(f"GITHUB_TOKEN present: {'yes' if bool(os.getenv('GITHUB_TOKEN', '').strip()) else 'no'}")
+    else:
+        print("Bitwarden secrets disabled (BITWARDEN_ENABLED=0)")
+        print(f"GITHUB_TOKEN present: {'yes' if bool(os.getenv('GITHUB_TOKEN', '').strip()) else 'no'}")
 
     hot_reload = env_flag("HOT_RELOAD", "1")
     ensure_backend_requirements(hot_reload)

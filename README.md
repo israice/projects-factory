@@ -50,6 +50,17 @@ PORT=5999
 LOG_LEVEL=INFO
 ```
 
+Bitwarden option (recommended for secrets):
+- Keep only non-secret values in `.env`.
+- Use Bitwarden Secrets Manager CLI (`bws`) with:
+  - `BITWARDEN_ENABLED=1`
+  - `BITWARDEN_PROVIDER=auto` (or `bws`)
+  - `BWS_ACCESS_TOKEN=...`
+  - `BWS_PROJECT_ID=...`
+  - `BWS_GITHUB_TOKEN_SECRET=GITHUB_TOKEN`
+  - `BWS_GITHUB_USERNAME_SECRET=GITHUB_USERNAME`
+  - `BWS_REQUIRE_WRITE=1` (startup probe for `create/update/delete`)
+
 ### 2.1 Configure functional settings
 
 All function-level runtime settings are defined in `settings.yaml` (single source of truth):
@@ -80,7 +91,7 @@ ui:
 1. Go to https://github.com/settings/tokens
 2. Click **Generate new token (classic)**
 3. Select scope **`repo`** (for private repos access)
-4. Copy the token to `.env`
+4. Store the token in Bitwarden (recommended) or in `.env`
 
 ## Usage
 
@@ -89,6 +100,21 @@ ui:
 ```bash
 python run.py
 ```
+
+Start with Bitwarden (`bws`) and still use `python run.py`:
+
+```powershell
+$env:BITWARDEN_ENABLED="1"
+$env:BITWARDEN_PROVIDER="bws"  # or "auto"
+$env:BWS_ACCESS_TOKEN="your-access-token"
+$env:BWS_PROJECT_ID="your-project-id"
+$env:BWS_REQUIRE_WRITE="1"
+python run.py
+```
+
+Bitwarden (`bws`) mapping:
+- secret key `GITHUB_TOKEN` -> env `GITHUB_TOKEN`
+- secret key `GITHUB_USERNAME` -> env `GITHUB_USERNAME`
 
 Or directly with uvicorn:
 

@@ -1,4 +1,5 @@
 # TASKS
+- one password to rule all env
 - перенести редактирование текста в отдельные кнопки
 - перенести настройку выбора над кнокой
 - настроить backup проектов ZIP to 2 diferent Clouds

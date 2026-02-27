@@ -64,15 +64,6 @@ SETTINGS_PATH = BASE_DIR / "settings.yaml"
 
 GITHUB_USERNAME = os.getenv("GITHUB_USERNAME", "Unknown")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
-PORT = int(os.getenv("PORT", "5999"))
-HOST = os.getenv("HOST", "127.0.0.1")
-CORS_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv(
-        "CORS_ORIGINS", f"http://127.0.0.1:{PORT},http://localhost:{PORT}"
-    ).split(",")
-    if origin.strip()
-]
 
 def load_function_settings():
     if not SETTINGS_PATH.exists():
@@ -145,12 +136,53 @@ def load_function_settings():
     default_push_message = require_string(ui_src, "default_push_message", "ui.default_push_message")
     create_project_repo_url = require_string(raw, "create_project_repo_url", "create_project_repo_url")
 
+    server_src = raw.get("server") or {}
+    if not isinstance(server_src, dict):
+        raise RuntimeError("settings.yaml key 'server' must be a mapping")
+
+    def default_cors_for_port(port: int) -> list[str]:
+        return [f"http://127.0.0.1:{port}", f"http://localhost:{port}"]
+
+    default_port = int(os.getenv("PORT", "5999"))
+    default_host = os.getenv("HOST", "127.0.0.1").strip() or "127.0.0.1"
+    default_cors = [
+        origin.strip()
+        for origin in os.getenv("CORS_ORIGINS", ",".join(default_cors_for_port(default_port))).split(",")
+        if origin.strip()
+    ]
+
+    raw_port = server_src.get("port", default_port)
+    try:
+        server_port = int(raw_port)
+    except Exception as exc:
+        raise RuntimeError("settings.yaml key 'server.port' must be integer") from exc
+    if server_port < 1:
+        raise RuntimeError("settings.yaml key 'server.port' must be >= 1")
+
+    server_host = str(server_src.get("host", default_host)).strip() or default_host
+
+    raw_cors = server_src.get("cors_origins", default_cors)
+    cors_origins: list[str] = []
+    if isinstance(raw_cors, list):
+        cors_origins = [str(origin).strip() for origin in raw_cors if str(origin).strip()]
+    elif isinstance(raw_cors, str):
+        cors_origins = [origin.strip() for origin in raw_cors.split(",") if origin.strip()]
+    else:
+        raise RuntimeError("settings.yaml key 'server.cors_origins' must be list or comma-separated string")
+    if not cors_origins:
+        cors_origins = default_cors_for_port(server_port)
+
     return {
         "timeouts": timeouts,
         "create_project_repo_url": create_project_repo_url,
         "cache": cache,
         "python": {"disable_bytecode": disable_bytecode},
         "ui": {"default_push_message": default_push_message},
+        "server": {
+            "port": server_port,
+            "host": server_host,
+            "cors_origins": cors_origins,
+        },
     }
 
 
@@ -160,6 +192,9 @@ CREATE_PROJECT_REPO_URL = FUNCTION_SETTINGS["create_project_repo_url"]
 GIT_STATE_TTL_SEC = FUNCTION_SETTINGS["cache"]["git_state_ttl_sec"]
 DISABLE_BYTECODE = FUNCTION_SETTINGS["python"]["disable_bytecode"]
 DEFAULT_PUSH_MESSAGE = FUNCTION_SETTINGS["ui"]["default_push_message"]
+PORT = FUNCTION_SETTINGS["server"]["port"]
+HOST = FUNCTION_SETTINGS["server"]["host"]
+CORS_ORIGINS = FUNCTION_SETTINGS["server"]["cors_origins"]
 
 app = FastAPI(title="GitHub Projects Manager")
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_credentials=False,
@@ -830,7 +865,7 @@ async def push_states():
 async def project_screenshots(path: str = ""):
     resolved = resolve_project_path(path)
     if not resolved:
-        raise HTTPException(404, "Folder not found")
+        return {"items": []}
 
     screenshots_dir = get_project_screenshots_dir(resolved)
     if not screenshots_dir.exists() or not screenshots_dir.is_dir():
