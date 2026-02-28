@@ -60,14 +60,6 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             recalcRowNumbers(State.repos);
             return true;
         }
-        function guessNewProjectPath(folderName = '') {
-            const base = State.repos.find(r => r.is_new_project && String(r.url || '').includes('NEW_PROJECTS'))?.url || '';
-            if (!base || !folderName) return folderName;
-            const normalized = String(base).replace(/\\/g, '/');
-            const idx = normalized.lastIndexOf('/');
-            if (idx < 0) return folderName;
-            return `${normalized.slice(0, idx + 1)}${folderName}`;
-        }
         const LAST_URL_ROW_KEY = 'projectsFactory:lastUrlRowNo';
         const LOCAL_DESC_KEY = 'projectsFactory:localDescriptions';
 
@@ -607,24 +599,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             UI.showWelcome('⏳ Creating project...');
             try {
                 const r = await API.createProject();
-                const folderName = String(r.folder_name || '').trim();
-                if (folderName) {
-                    const exists = State.repos.some(repo => repo.is_new_project && repo.name === folderName);
-                    if (!exists) {
-                        State.repos.push({
-                            name: folderName,
-                            url: guessNewProjectPath(folderName),
-                            private: false,
-                            description: State.localDescriptions?.[folderName] || '',
-                            created_at: new Date().toISOString(),
-                            is_new_project: true,
-                            can_push: false,
-                        });
-                        recalcStateCounters();
-                        UI.updateHeader();
-                        UI.renderTable();
-                    }
-                }
+                await refreshDataAndView(false);
                 UI.showWelcome(r.message || '✅ Project created');
             } catch (e) { UI.showWelcome('❌ Create failed: ' + e.message); }
         }

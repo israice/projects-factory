@@ -51,3 +51,4 @@ v0.0.36 - added VSCode button
 v0.0.37 - added bitwarden instead env
 v0.0.38 - added green clock to right top 
 v0.0.39 - added authentication flow
+v0.0.40 - fixed error handling and validation

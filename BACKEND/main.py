@@ -148,7 +148,7 @@ def invalidate_runtime_caches():
     GITHUB_REPOS_CACHE["expires_at"] = 0.0
 
 
-def run_script(script: Path, args=None, timeout=None):
+def run_script(script: Path, args=None, timeout=None, cwd: Path | None = None):
     cmd = [sys.executable, str(script)] + (args or [])
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = str(PYTHONDONTWRITEBYTECODE)
@@ -156,7 +156,8 @@ def run_script(script: Path, args=None, timeout=None):
     env.pop("PYTHONHOME", None)
     env.pop("PYTHONPATH", None)
     result = subprocess.run(cmd, capture_output=True, text=True,
-                          timeout=timeout, encoding='utf-8', errors='replace', env=env)
+                          timeout=timeout, encoding='utf-8', errors='replace', env=env,
+                          cwd=str(cwd) if cwd else None)
     if result.returncode != 0:
         raise Exception((result.stderr or result.stdout or "Failed").strip()[:200])
     return result
@@ -472,6 +473,18 @@ def resolve_project_path(raw_path: str):
     if not any(resolved == root or root in resolved.parents for root in allowed_roots):
         return None
     return resolved
+
+
+def resolve_local_project_dir(name: str):
+    normalized = str(name or "").strip()
+    if not safe_name(normalized):
+        return None
+
+    # Canonical location for local-only projects.
+    new_projects_path = NEW_PROJECTS_DIR / normalized
+    if new_projects_path.exists() and new_projects_path.is_dir():
+        return new_projects_path
+    return None
 
 
 def _list_windows_explorer_handles():
@@ -791,7 +804,8 @@ async def create_project(request: Request):
     require_write_access(request)
     try:
         script = ensure_create_project_script()
-        result = run_script(script, timeout=TIMEOUTS["create_project"])
+        NEW_PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
+        result = run_script(script, timeout=TIMEOUTS["create_project"], cwd=NEW_PROJECTS_DIR)
         output = (result.stdout or "").strip()
         folder = ""
         try:
@@ -802,9 +816,18 @@ async def create_project(request: Request):
             logger.debug("create-project script output is not JSON: %s", exc)
             if 'Project "' in output and '" created' in output:
                 folder = output.split('Project "')[1].split('" created')[0]
+        folder = str(folder or "").strip()
+        folder_path = ""
+        if folder and safe_name(folder):
+            created_dir = NEW_PROJECTS_DIR / folder
+            legacy_dir = BASE_DIR / folder
+            if not created_dir.exists() and legacy_dir.exists() and legacy_dir.is_dir():
+                shutil.move(str(legacy_dir), str(created_dir))
+            if created_dir.exists() and created_dir.is_dir():
+                folder_path = str(created_dir).replace("\\", "/")
         invalidate_runtime_caches()
         return {"success": True, "message": f'Project "{folder}" created' if folder else "Project created",
-                "folder_name": folder}
+                "folder_name": folder, "folder_path": folder_path}
     except Exception as e:
         raise HTTPException(500, str(e))
 
@@ -820,24 +843,27 @@ async def add_to_github(payload: AddToGithubPayload, request: Request):
     if visibility not in ("public", "private"):
         raise HTTPException(400, "Invalid visibility")
 
-    source_path = NEW_PROJECTS_DIR / name
-    if not source_path.exists() or not source_path.is_dir():
-        raise HTTPException(404, f"Folder '{name}' not found")
     target_path = MY_REPOS_DIR / name
-    if target_path.exists():
-        raise HTTPException(400, f"Folder '{name}' already exists in MY_REPOS")
+    source_path = resolve_local_project_dir(name)
+
+    target_exists = target_path.exists() and target_path.is_dir()
+    if source_path is None or (not source_path.exists()) or (not source_path.is_dir()):
+        raise HTTPException(404, f"Folder '{name}' not found in NEW_PROJECTS")
+    if target_exists:
+        raise HTTPException(409, f"Folder '{name}' already exists in MY_REPOS")
+    source_project_path: Path = source_path
 
     commit_date = datetime.now().strftime("%d.%m.%Y")
     commit_message = f"v0.0.1 - {name} started {commit_date}"
     repo_slug = f"{GITHUB_USERNAME}/{name}" if GITHUB_USERNAME and GITHUB_USERNAME != "Unknown" else name
 
     try:
-        # Move project into MY_REPOS first, then create/push GitHub repository from there.
+        # Move project from NEW_PROJECTS into MY_REPOS first, then create/push GitHub repository.
         moved = False
         try:
-            source_path.rename(target_path)
+            source_project_path.rename(target_path)
         except OSError:
-            shutil.move(str(source_path), str(target_path))
+            shutil.move(str(source_project_path), str(target_path))
         moved = True
 
         project_path = target_path
@@ -849,7 +875,7 @@ async def add_to_github(payload: AddToGithubPayload, request: Request):
         visibility_flag = "--private" if visibility == "private" else "--public"
         gh_cmd = [
             "gh", "repo", "create", repo_slug, visibility_flag,
-            "--description", description or "Local project folder",
+            "--description", description or "",
             "--source", ".", "--remote", "origin", "--push",
         ]
         run_command(gh_cmd, cwd=project_path, timeout=120)
@@ -864,8 +890,14 @@ async def add_to_github(payload: AddToGithubPayload, request: Request):
         }
     except Exception as e:
         try:
-            if 'moved' in locals() and moved and target_path.exists() and not source_path.exists():
-                target_path.rename(source_path)
+            if (
+                'moved' in locals()
+                and moved
+                and source_project_path
+                and target_path.exists()
+                and not source_project_path.exists()
+            ):
+                target_path.rename(source_project_path)
         except Exception as rollback_exc:
             logger.error("Rollback failed for add-to-github %s: %s", name, rollback_exc)
         raise HTTPException(500, str(e))
@@ -908,9 +940,10 @@ async def rename_local(payload: RenamePayload, request: Request):
     old, new = payload.old_name.strip(), payload.new_name.strip()
     if not old or not new or not safe_name(old) or not safe_name(new):
         raise HTTPException(400, "Invalid names")
-    old_path, new_path = NEW_PROJECTS_DIR / old, NEW_PROJECTS_DIR / new
-    if not old_path.exists():
+    old_path = resolve_local_project_dir(old)
+    if not old_path:
         raise HTTPException(404, f"Folder '{old}' not found")
+    new_path = old_path.parent / new
     if new_path.exists():
         raise HTTPException(400, f"Folder '{new}' already exists")
     old_path.rename(new_path)
