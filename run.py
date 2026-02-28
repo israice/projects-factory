@@ -18,46 +18,27 @@ import threading
 import time
 from pathlib import Path
 
-os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
-sys.dont_write_bytecode = True
-
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR / "FRONTEND"
-SETTINGS_PATH = BASE_DIR / "settings.yaml"
 sys.path.insert(0, str(BASE_DIR))
+from SETTINGS import PYTHONDONTWRITEBYTECODE, SERVER_HOST, SERVER_PORT
+
+os.environ["PYTHONDONTWRITEBYTECODE"] = str(PYTHONDONTWRITEBYTECODE)
+sys.dont_write_bytecode = str(PYTHONDONTWRITEBYTECODE).strip().lower() in ("1", "true", "yes", "on")
 
 from dotenv import load_dotenv
 load_dotenv()
 
 
 def load_server_settings() -> tuple[int, str]:
-    default_port = int(os.getenv("PORT", "5999"))
-    default_host = os.getenv("HOST", "127.0.0.1").strip() or "127.0.0.1"
-
-    if not SETTINGS_PATH.exists():
-        return default_port, default_host
-
     try:
-        import yaml
-        raw = yaml.safe_load(SETTINGS_PATH.read_text(encoding="utf-8")) or {}
-    except Exception:
-        return default_port, default_host
-
-    if not isinstance(raw, dict):
-        return default_port, default_host
-
-    server = raw.get("server") or {}
-    if not isinstance(server, dict):
-        return default_port, default_host
-
-    try:
-        port = int(server.get("port", default_port))
-    except Exception:
-        port = default_port
+        port = int(SERVER_PORT)
+    except Exception as exc:
+        raise RuntimeError("Invalid SERVER_PORT in SETTINGS.py") from exc
     if port < 1:
-        port = default_port
+        raise RuntimeError("SERVER_PORT must be >= 1")
 
-    host = str(server.get("host", default_host)).strip() or default_host
+    host = str(SERVER_HOST).strip() or "127.0.0.1"
     return port, host
 
 

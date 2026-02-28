@@ -40,7 +40,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 localOnlyCount: State.localOnlyCount,
                 lastLaunchedRowNo: State.lastLaunchedRowNo,
                 localDescriptions: State.localDescriptions || {},
-                defaultPushMessage: State.defaultPushMessage || DEFAULT_PUSH_MESSAGE,
+                defaultPushMessage: State.defaultPushMessage || '',
             };
         }
         function restoreStateSnapshot(snapshot) {
@@ -56,7 +56,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             State.localDescriptions = snapshot.localDescriptions && typeof snapshot.localDescriptions === 'object'
                 ? snapshot.localDescriptions
                 : {};
-            State.defaultPushMessage = String(snapshot.defaultPushMessage || DEFAULT_PUSH_MESSAGE);
+            State.defaultPushMessage = String(snapshot.defaultPushMessage || '');
             recalcRowNumbers(State.repos);
             return true;
         }
@@ -70,7 +70,6 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
         }
         const LAST_URL_ROW_KEY = 'projectsFactory:lastUrlRowNo';
         const LOCAL_DESC_KEY = 'projectsFactory:localDescriptions';
-        const DEFAULT_PUSH_MESSAGE = '';
 
         function readLocalDescriptions() {
             try {
@@ -243,7 +242,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
             localOnlyCount: 0,
             lastLaunchedRowNo: null,
             localDescriptions: {},
-            defaultPushMessage: DEFAULT_PUSH_MESSAGE,
+            defaultPushMessage: '',
 
             async init() {
                 const [config, reposData] = await Promise.all([
@@ -253,7 +252,7 @@ const normalizeRepoUrl = (url = '') => String(url).replace(/\.git$/, '').replace
                 this.username = config.username;
                 this.avatarUrl = config.avatar_url;
                 this.installedCount = config.installed_count;
-                this.defaultPushMessage = String(config.default_push_message || '').trim() || DEFAULT_PUSH_MESSAGE;
+                this.defaultPushMessage = String(config.default_push_message || '').trim();
                 const repos = reposData.repos || [];
                 const orderedForRowNo = [...repos].sort((a, b) => {
                     const dt = getCreatedAtMs(b.created_at) - getCreatedAtMs(a.created_at);

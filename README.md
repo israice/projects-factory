@@ -63,28 +63,24 @@ Bitwarden option (recommended for secrets):
 
 ### 2.1 Configure functional settings
 
-All function-level runtime settings are defined in `settings.yaml` (single source of truth):
+All function-level runtime settings are defined in `SETTINGS.py` (single source of truth):
 
-```yaml
-timeouts:
-  refresh: 120
-  create_project: 120
-  install_per_repo: 300
-  delete_per_repo: 60
-  rename: 60
-  git_remote: 5
-  git_push: 120
-
-create_project_repo_url: "https://github.com/israice/Create-Project-Folder.git"
-cache:
-  git_state_ttl_sec: 10
-python:
-  disable_bytecode: true
-ui:
-  default_push_message: "v0.0.2 - new table based dashboard"
+```python
+TIMEOUT_REFRESH = 120
+TIMEOUT_CREATE_PROJECT = 120
+TIMEOUT_INSTALL_PER_REPO = 300
+TIMEOUT_DELETE_PER_REPO = 60
+TIMEOUT_RENAME = 60
+TIMEOUT_GIT_REMOTE = 5
+TIMEOUT_GIT_PUSH = 120
+CREATE_PROJECT_REPO_URL = "https://github.com/israice/Create-Project-Folder.git"
+GIT_STATE_TTL_SEC = 10
+PYTHONDONTWRITEBYTECODE = "1"
+SERVER_PORT = 5001
+SERVER_HOST = "127.0.0.1"
 ```
 
-`settings.yaml` is required at startup. Missing keys will stop the app with a clear error.
+`SETTINGS.py` is required at startup.
 
 ### 3. Get GitHub Token
 
@@ -132,7 +128,7 @@ Before using the web interface, fetch your GitHub repositories:
 python BACKEND/get_all_github_projects.py
 ```
 
-This creates/updates `BACKEND/get_all_github_projects.yaml` with your repos.
+This validates access and prints how many repositories are available via GitHub API.
 
 ## API Endpoints
 
@@ -160,7 +156,6 @@ projects-factory/
 ├── BACKEND/
 │   ├── main.py               # FastAPI backend (single file)
 │   ├── get_all_github_projects.py
-│   ├── get_all_github_projects.yaml
 │   ├── install_existing_repo.py
 │   ├── delete_local_folder.py
 │   └── rename_github_repo.py
@@ -168,7 +163,7 @@ projects-factory/
 ├── NEW_PROJECTS/             # Local project folders
 ├── OLD_TEMP/                 # Backup of old architecture (can delete)
 ├── requirements.txt          # Python dependencies
-├── settings.yaml             # Configuration
+├── SETTINGS.py               # Configuration
 └── .env                      # Environment variables
 ```
 

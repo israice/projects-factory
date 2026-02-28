@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Rename a GitHub repository using the GitHub API, then update local YAML + local folder.
+Rename a GitHub repository using the GitHub API, then update the local folder.
 
 Usage:
   python rename_github_repo.py <old_name> <new_name>
@@ -15,7 +15,6 @@ Behavior preserved from the original script:
 - Renames repo via GitHub API PATCH /repos/{owner}/{old_name} with {"name": new_name}
 - On success (HTTP 200):
   - prints OK + new URL
-  - updates BACKEND/get_all_github_projects.yaml (if present)
   - renames local folder under MY_REPOS (by direct folder name match, else scan git remotes)
   - attempts to set remote origin URL to https://github.com/{owner}/{new}.git (best-effort)
 - On failure:
@@ -75,52 +74,6 @@ def build_session(token: str) -> requests.Session:
         }
     )
     return s
-
-
-def update_yaml_file(project_root: Path, old_name: str, new_name: str) -> bool:
-    """Update BACKEND/get_all_github_projects.yaml if present."""
-    yaml_path = project_root / "BACKEND" / "get_all_github_projects.yaml"
-
-    if not yaml_path.exists():
-        print(f"Warning: YAML file not found at {yaml_path}")
-        return False
-
-    try:
-        import yaml  # local import like original
-
-        data = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
-        repos = data.get("repositories", [])
-        if not isinstance(repos, list):
-            print("Error updating YAML file: invalid YAML structure (repositories is not a list)")
-            return False
-
-        found = False
-        for repo in repos:
-            if isinstance(repo, dict) and repo.get("name") == old_name:
-                repo["name"] = new_name
-
-                old_url = repo.get("url", "")
-                # Preserve original intent: update URL only if it ends with old_name.
-                if isinstance(old_url, str) and old_url.endswith(old_name):
-                    repo["url"] = old_url[: -len(old_name)] + new_name
-
-                found = True
-                break
-
-        if not found:
-            print(f"Warning: Repository '{old_name}' not found in YAML file")
-            return False
-
-        yaml_path.write_text(
-            yaml.safe_dump(data, allow_unicode=True, sort_keys=False, default_flow_style=False),
-            encoding="utf-8",
-        )
-        print(f"OK: Updated YAML file: {old_name} -> {new_name}")
-        return True
-
-    except Exception as e:
-        print(f"Error updating YAML file: {e}")
-        return False
 
 
 def _git_remote_origin(folder_path: Path) -> Optional[str]:
@@ -264,7 +217,6 @@ def rename_repository(token: str, owner: str, old_name: str, new_name: str) -> b
             print(f"New URL: https://github.com/{owner}/{new_name}")
 
             project_root = get_project_root()
-            update_yaml_file(project_root, old_name, new_name)
             rename_local_folder(project_root, owner, old_name, new_name)
             return True
 

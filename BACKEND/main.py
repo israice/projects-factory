@@ -19,10 +19,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
+from SETTINGS import PYTHONDONTWRITEBYTECODE
 
 # Disable .pyc/__pycache__ creation for this process and child Python runs.
-os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
-sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = str(PYTHONDONTWRITEBYTECODE)
+sys.dont_write_bytecode = str(PYTHONDONTWRITEBYTECODE).strip().lower() in ("1", "true", "yes", "on")
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
@@ -38,6 +39,20 @@ from BACKEND.api_models import (
     UpdateDescriptionPayload,
     OpenFolderPayload,
     PushPayload,
+)
+from BACKEND.get_all_github_projects import fetch_compact_repos
+from SETTINGS import (
+    CREATE_PROJECT_REPO_URL,
+    GIT_STATE_TTL_SEC,
+    SERVER_HOST,
+    SERVER_PORT,
+    TIMEOUT_CREATE_PROJECT,
+    TIMEOUT_DELETE_PER_REPO,
+    TIMEOUT_GIT_PUSH,
+    TIMEOUT_GIT_REMOTE,
+    TIMEOUT_INSTALL_PER_REPO,
+    TIMEOUT_REFRESH,
+    TIMEOUT_RENAME,
 )
 
 load_dotenv()
@@ -59,142 +74,34 @@ FRONTEND_DIR = BASE_DIR / "FRONTEND"
 BACKEND_DIR = BASE_DIR / "BACKEND"
 MY_REPOS_DIR = BASE_DIR / "MY_REPOS"
 NEW_PROJECTS_DIR = BASE_DIR / "NEW_PROJECTS"
-YAML_PATH = BACKEND_DIR / "get_all_github_projects.yaml"
-SETTINGS_PATH = BASE_DIR / "settings.yaml"
 
 GITHUB_USERNAME = os.getenv("GITHUB_USERNAME", "Unknown")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 
-def load_function_settings():
-    if not SETTINGS_PATH.exists():
-        raise RuntimeError(f"Missing required settings file: {SETTINGS_PATH}")
-
-    try:
-        import yaml
-        raw = yaml.safe_load(SETTINGS_PATH.read_text(encoding="utf-8")) or {}
-    except Exception as exc:
-        raise RuntimeError(f"Failed to read settings.yaml: {exc}") from exc
-
-    if not isinstance(raw, dict):
-        raise RuntimeError("settings.yaml must contain a top-level mapping")
-
-    def require_mapping(container: dict, key: str):
-        value = container.get(key)
-        if not isinstance(value, dict):
-            raise RuntimeError(f"settings.yaml missing required mapping: {key}")
-        return value
-
-    def require_positive_int(container: dict, key: str, path: str):
-        value = container.get(key)
-        if value is None:
-            raise RuntimeError(f"settings.yaml missing required key: {path}")
-        try:
-            num = int(value)
-        except Exception as exc:
-            raise RuntimeError(f"settings.yaml key '{path}' must be integer") from exc
-        if num < 1:
-            raise RuntimeError(f"settings.yaml key '{path}' must be >= 1")
-        return num
-
-    def require_string(container: dict, key: str, path: str):
-        value = container.get(key)
-        if value is None:
-            raise RuntimeError(f"settings.yaml missing required key: {path}")
-        text = str(value).strip()
-        if not text:
-            raise RuntimeError(f"settings.yaml key '{path}' must be non-empty string")
-        return text
-
-    timeouts_src = require_mapping(raw, "timeouts")
-    timeouts = {
-        "refresh": require_positive_int(timeouts_src, "refresh", "timeouts.refresh"),
-        "create_project": require_positive_int(timeouts_src, "create_project", "timeouts.create_project"),
-        "install_per_repo": require_positive_int(timeouts_src, "install_per_repo", "timeouts.install_per_repo"),
-        "delete_per_repo": require_positive_int(timeouts_src, "delete_per_repo", "timeouts.delete_per_repo"),
-        "rename": require_positive_int(timeouts_src, "rename", "timeouts.rename"),
-        "git_remote": require_positive_int(timeouts_src, "git_remote", "timeouts.git_remote"),
-        "git_push": require_positive_int(timeouts_src, "git_push", "timeouts.git_push"),
-    }
-
-    cache_src = require_mapping(raw, "cache")
-    cache = {
-        "git_state_ttl_sec": require_positive_int(cache_src, "git_state_ttl_sec", "cache.git_state_ttl_sec"),
-    }
-
-    python_src = require_mapping(raw, "python")
-    if "disable_bytecode" not in python_src:
-        raise RuntimeError("settings.yaml missing required key: python.disable_bytecode")
-    disable_bytecode = python_src["disable_bytecode"]
-    if isinstance(disable_bytecode, str):
-        disable_bytecode = disable_bytecode.strip().lower() in ("1", "true", "yes", "on")
-    else:
-        disable_bytecode = bool(disable_bytecode)
-    if not disable_bytecode:
-        raise RuntimeError("settings.yaml requires python.disable_bytecode: true")
-
-    ui_src = require_mapping(raw, "ui")
-    default_push_message = require_string(ui_src, "default_push_message", "ui.default_push_message")
-    create_project_repo_url = require_string(raw, "create_project_repo_url", "create_project_repo_url")
-
-    server_src = raw.get("server") or {}
-    if not isinstance(server_src, dict):
-        raise RuntimeError("settings.yaml key 'server' must be a mapping")
-
-    def default_cors_for_port(port: int) -> list[str]:
-        return [f"http://127.0.0.1:{port}", f"http://localhost:{port}"]
-
-    default_port = int(os.getenv("PORT", "5999"))
-    default_host = os.getenv("HOST", "127.0.0.1").strip() or "127.0.0.1"
-    default_cors = [
-        origin.strip()
-        for origin in os.getenv("CORS_ORIGINS", ",".join(default_cors_for_port(default_port))).split(",")
-        if origin.strip()
-    ]
-
-    raw_port = server_src.get("port", default_port)
-    try:
-        server_port = int(raw_port)
-    except Exception as exc:
-        raise RuntimeError("settings.yaml key 'server.port' must be integer") from exc
-    if server_port < 1:
-        raise RuntimeError("settings.yaml key 'server.port' must be >= 1")
-
-    server_host = str(server_src.get("host", default_host)).strip() or default_host
-
-    raw_cors = server_src.get("cors_origins", default_cors)
-    cors_origins: list[str] = []
-    if isinstance(raw_cors, list):
-        cors_origins = [str(origin).strip() for origin in raw_cors if str(origin).strip()]
-    elif isinstance(raw_cors, str):
-        cors_origins = [origin.strip() for origin in raw_cors.split(",") if origin.strip()]
-    else:
-        raise RuntimeError("settings.yaml key 'server.cors_origins' must be list or comma-separated string")
-    if not cors_origins:
-        cors_origins = default_cors_for_port(server_port)
-
-    return {
-        "timeouts": timeouts,
-        "create_project_repo_url": create_project_repo_url,
-        "cache": cache,
-        "python": {"disable_bytecode": disable_bytecode},
-        "ui": {"default_push_message": default_push_message},
-        "server": {
-            "port": server_port,
-            "host": server_host,
-            "cors_origins": cors_origins,
-        },
-    }
+def default_cors_for_port(port: int) -> list[str]:
+    return [f"http://127.0.0.1:{port}", f"http://localhost:{port}"]
 
 
-FUNCTION_SETTINGS = load_function_settings()
-TIMEOUTS = FUNCTION_SETTINGS["timeouts"]
-CREATE_PROJECT_REPO_URL = FUNCTION_SETTINGS["create_project_repo_url"]
-GIT_STATE_TTL_SEC = FUNCTION_SETTINGS["cache"]["git_state_ttl_sec"]
-DISABLE_BYTECODE = FUNCTION_SETTINGS["python"]["disable_bytecode"]
-DEFAULT_PUSH_MESSAGE = FUNCTION_SETTINGS["ui"]["default_push_message"]
-PORT = FUNCTION_SETTINGS["server"]["port"]
-HOST = FUNCTION_SETTINGS["server"]["host"]
-CORS_ORIGINS = FUNCTION_SETTINGS["server"]["cors_origins"]
+TIMEOUTS = {
+    "refresh": int(TIMEOUT_REFRESH),
+    "create_project": int(TIMEOUT_CREATE_PROJECT),
+    "install_per_repo": int(TIMEOUT_INSTALL_PER_REPO),
+    "delete_per_repo": int(TIMEOUT_DELETE_PER_REPO),
+    "rename": int(TIMEOUT_RENAME),
+    "git_remote": int(TIMEOUT_GIT_REMOTE),
+    "git_push": int(TIMEOUT_GIT_PUSH),
+}
+
+raw_port = str(SERVER_PORT)
+try:
+    PORT = int(raw_port)
+except Exception as exc:
+    raise RuntimeError("Invalid PORT value") from exc
+if PORT < 1:
+    raise RuntimeError("PORT must be >= 1")
+
+HOST = str(SERVER_HOST).strip() or "127.0.0.1"
+CORS_ORIGINS = default_cors_for_port(PORT)
 
 app = FastAPI(title="GitHub Projects Manager")
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_credentials=False,
@@ -233,16 +140,18 @@ class Project:
 
 
 GIT_STATE_CACHE = {"by_path": {}, "by_remote": {}, "expires_at": 0.0}
+GITHUB_REPOS_CACHE = {"items": [], "expires_at": 0.0}
 
 
 def invalidate_runtime_caches():
     GIT_STATE_CACHE["expires_at"] = 0.0
+    GITHUB_REPOS_CACHE["expires_at"] = 0.0
 
 
 def run_script(script: Path, args=None, timeout=None):
     cmd = [sys.executable, str(script)] + (args or [])
     env = os.environ.copy()
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env["PYTHONDONTWRITEBYTECODE"] = str(PYTHONDONTWRITEBYTECODE)
     # Guard child Python processes from broken interpreter env overrides.
     env.pop("PYTHONHOME", None)
     env.pop("PYTHONPATH", None)
@@ -450,15 +359,30 @@ def get_local_git_states(force_refresh=False):
     return states_by_path, states_by_remote
 
 
-def load_yaml_repos():
-    if not YAML_PATH.exists():
+def load_github_repos(force_refresh=False, raise_on_error=False):
+    now = time.time()
+    if (not force_refresh) and GITHUB_REPOS_CACHE["expires_at"] > now:
+        return GITHUB_REPOS_CACHE["items"]
+
+    if not GITHUB_USERNAME or GITHUB_USERNAME == "Unknown" or not GITHUB_TOKEN:
+        if raise_on_error:
+            raise RuntimeError("GITHUB_USERNAME and GITHUB_TOKEN are required")
+        logger.warning("GitHub credentials are missing; returning empty repo list")
+        GITHUB_REPOS_CACHE["items"] = []
+        GITHUB_REPOS_CACHE["expires_at"] = now + 10
         return []
+
     try:
-        import yaml
-        data = yaml.safe_load(YAML_PATH.read_text(encoding="utf-8")) or {}
-        return [r for r in (data.get("repositories", []) or []) if isinstance(r, dict)]
+        repos = fetch_compact_repos(GITHUB_USERNAME, GITHUB_TOKEN)
+        GITHUB_REPOS_CACHE["items"] = repos
+        GITHUB_REPOS_CACHE["expires_at"] = now + TIMEOUTS["refresh"]
+        return repos
     except Exception as exc:
-        logger.warning("Failed to load YAML repos: %s", exc)
+        if raise_on_error:
+            raise
+        logger.warning("Failed to fetch GitHub repos: %s", exc)
+        if GITHUB_REPOS_CACHE["items"]:
+            return GITHUB_REPOS_CACHE["items"]
         return []
 
 
@@ -667,54 +591,6 @@ def require_write_access(request: Request):
         raise HTTPException(403, "Write access is limited to local requests")
 
 
-def update_yaml_rename(old, new):
-    if not YAML_PATH.exists():
-        return
-    try:
-        import yaml
-        data = yaml.safe_load(YAML_PATH.read_text(encoding="utf-8")) or {}
-        for repo in (data.get("repositories", []) or []):
-            if isinstance(repo, dict) and repo.get("name") == old:
-                repo["name"] = new
-                if "url" in repo and isinstance(repo["url"], str):
-                    repo["url"] = repo["url"].rstrip("/").removesuffix(old) + new
-        YAML_PATH.write_text(yaml.safe_dump(data, allow_unicode=True,
-                                            sort_keys=False, default_flow_style=False), encoding="utf-8")
-    except Exception as exc:
-        logger.warning("Failed to update YAML rename (%s -> %s): %s", old, new, exc)
-
-
-def update_yaml_description(name, description):
-    if not YAML_PATH.exists():
-        return
-    try:
-        import yaml
-        data = yaml.safe_load(YAML_PATH.read_text(encoding="utf-8")) or {}
-        for repo in (data.get("repositories", []) or []):
-            if isinstance(repo, dict) and repo.get("name") == name:
-                repo["description"] = description
-                break
-        YAML_PATH.write_text(yaml.safe_dump(data, allow_unicode=True,
-                                            sort_keys=False, default_flow_style=False), encoding="utf-8")
-    except Exception as exc:
-        logger.warning("Failed to update YAML description (%s): %s", name, exc)
-
-
-def remove_repo_from_yaml(name):
-    if not YAML_PATH.exists():
-        return
-    try:
-        import yaml
-        data = yaml.safe_load(YAML_PATH.read_text(encoding="utf-8")) or {}
-        repos = [r for r in (data.get("repositories", []) or [])
-                 if not (isinstance(r, dict) and r.get("name") == name)]
-        data["repositories"] = repos
-        YAML_PATH.write_text(yaml.safe_dump(data, allow_unicode=True,
-                                            sort_keys=False, default_flow_style=False), encoding="utf-8")
-    except Exception as exc:
-        logger.warning("Failed to remove repo from YAML (%s): %s", name, exc)
-
-
 @app.get("/")
 async def index():
     return FileResponse(str(FRONTEND_DIR / "index.html"), headers={
@@ -776,15 +652,14 @@ async def config():
     installed_urls = list(get_installed_urls())
     return {"username": GITHUB_USERNAME, "avatar_url": get_avatar(),
             "installed_count": len(installed_urls),
-            "installed_urls": installed_urls,
-            "default_push_message": DEFAULT_PUSH_MESSAGE}
+            "installed_urls": installed_urls}
 
 
 @app.get("/api/repos")
 async def repos():
-    yaml_repos = load_yaml_repos()
-    sorted_repos = sorted(yaml_repos, key=lambda r: (r.get("name") != GITHUB_USERNAME,
-                                                      str(r.get("name", "")).lower()))
+    github_repos = load_github_repos()
+    sorted_repos = sorted(github_repos, key=lambda r: (r.get("name") != GITHUB_USERNAME,
+                                                        str(r.get("name", "")).lower()))
     states_by_path, states_by_remote = get_local_git_states()
 
     enriched_github = []
@@ -824,9 +699,9 @@ async def repos():
 
 @app.get("/api/push-states")
 async def push_states():
-    yaml_repos = load_yaml_repos()
-    sorted_repos = sorted(yaml_repos, key=lambda r: (r.get("name") != GITHUB_USERNAME,
-                                                      str(r.get("name", "")).lower()))
+    github_repos = load_github_repos()
+    sorted_repos = sorted(github_repos, key=lambda r: (r.get("name") != GITHUB_USERNAME,
+                                                        str(r.get("name", "")).lower()))
     states_by_path, states_by_remote = get_local_git_states(force_refresh=True)
 
     items = []
@@ -904,8 +779,8 @@ async def project_screenshot_file(path: str = "", name: str = ""):
 async def refresh(request: Request):
     require_write_access(request)
     try:
-        run_script(BACKEND_DIR / "get_all_github_projects.py", timeout=TIMEOUTS["refresh"])
         invalidate_runtime_caches()
+        load_github_repos(force_refresh=True, raise_on_error=True)
         return {"success": True, "message": "✅ Repositories refreshed"}
     except Exception as e:
         raise HTTPException(500, str(e))
@@ -979,7 +854,6 @@ async def add_to_github(payload: AddToGithubPayload, request: Request):
         ]
         run_command(gh_cmd, cwd=project_path, timeout=120)
 
-        run_script(BACKEND_DIR / "get_all_github_projects.py", timeout=TIMEOUTS["refresh"])
         invalidate_runtime_caches()
         return {
             "success": True,
@@ -1040,7 +914,6 @@ async def rename_local(payload: RenamePayload, request: Request):
     if new_path.exists():
         raise HTTPException(400, f"Folder '{new}' already exists")
     old_path.rename(new_path)
-    update_yaml_rename(old, new)
     invalidate_runtime_caches()
     return {"success": True, "old_name": old, "new_name": new}
 
@@ -1087,7 +960,6 @@ async def delete_github(payload: DeleteGithubPayload, request: Request):
                 detail = r.text
             raise HTTPException(500, f"GitHub API error {r.status_code}: {detail[:200]}")
 
-        remove_repo_from_yaml(name)
         invalidate_runtime_caches()
         return {"success": True, "name": name}
     except HTTPException:
@@ -1124,7 +996,6 @@ async def update_description(payload: UpdateDescriptionPayload, request: Request
                 detail = r.text
             raise HTTPException(500, f"GitHub API error {r.status_code}: {detail[:200]}")
 
-        update_yaml_description(name, description)
         invalidate_runtime_caches()
         return {"success": True, "name": name, "description": description}
     except HTTPException:
@@ -1186,7 +1057,9 @@ async def push_repo(payload: PushPayload, request: Request):
                 timeout=30,
             )
             output_lines = [line.strip() for line in (version_result.stdout or "").splitlines() if line.strip()]
-            commit_message = output_lines[-1] if output_lines else (payload.message.strip() or DEFAULT_PUSH_MESSAGE)
+            if not output_lines:
+                raise RuntimeError("Failed to generate commit message from create_new_version.py output")
+            commit_message = output_lines[-1]
         else:
             commit_message = get_last_version_line(resolved)
             if not commit_message:
